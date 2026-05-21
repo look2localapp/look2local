@@ -1,5 +1,6 @@
 import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
+import Image from "next/image";
 import { Store, MapPin, Zap, ShieldCheck } from "lucide-react";
 
 export default function SignUpPage() {
@@ -9,8 +10,8 @@ export default function SignUpPage() {
       {/* Left brand panel */}
       <div className="hidden lg:flex flex-col justify-center px-16 bg-gradient-to-br from-gray-900 via-[#1a1a2e] to-gray-900 w-[420px] flex-shrink-0">
         <Link href="/" className="flex items-center gap-2.5 mb-10">
-          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-            <Store className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden relative border border-gray-100 flex items-center justify-center bg-white">
+            <Image src="/logo.jpeg" alt="Look2Local" fill className="object-cover" />
           </div>
           <span className="font-heading text-xl font-extrabold text-white">
             Look2<span className="text-orange-400">Local</span>

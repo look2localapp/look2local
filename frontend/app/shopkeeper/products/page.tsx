@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { BarChart3, Package, Video, Settings, ShoppingBag, Store, PlusCircle, Search, Edit2, Trash2, X, ArrowLeft } from "lucide-react";
@@ -25,6 +25,49 @@ export default function ShopkeeperProductsPage() {
   const [query, setQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [bankOffers, setBankOffers] = useState([{ bank: "", type: "", text: "" }]);
+
+  // Autocomplete State
+  const [formTitle, setFormTitle] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+  const [apiResults, setApiResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = (val: string) => {
+    setFormTitle(val);
+    if (!val.trim()) {
+      setApiResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      setShowDropdown(true);
+      try {
+        const res = await fetch(`/api/product-search?q=${encodeURIComponent(val)}`);
+        const data = await res.json();
+        setApiResults(Array.isArray(data) ? data : data.data || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+  };
+
+  const handleProductSelect = (device: any) => {
+    setFormTitle(device.name || "");
+    const specs = [];
+    if (device.brand) specs.push(`Brand: ${device.brand}`);
+    if (device.resolution) specs.push(`Resolution: ${device.resolution}`);
+    if (device.os) specs.push(`OS: ${device.os}`);
+    setFormDescription(specs.join(" | "));
+    setShowDropdown(false);
+  };
 
   const filtered = PRODUCTS.filter(p => p.title.toLowerCase().includes(query.toLowerCase()));
 
@@ -157,13 +200,53 @@ export default function ShopkeeperProductsPage() {
                 aspectRatio="product"
                 onUpload={(url) => console.log("Product image URL:", url)}
               />
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Product Title *</label>
-                <input type="text" placeholder="e.g. iPhone 16 Pro 256GB" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                <input 
+                  type="text" 
+                  value={formTitle}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => { if (apiResults.length > 0) setShowDropdown(true); }}
+                  placeholder="e.g. iPhone 16 Pro 256GB" 
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" 
+                />
+                
+                {/* Autocomplete Dropdown */}
+                {showDropdown && (formTitle.trim() !== "") && (
+                  <div className="absolute z-20 left-0 right-0 mt-2 bg-white border border-gray-100 shadow-xl rounded-xl max-h-64 overflow-y-auto">
+                    {isSearching ? (
+                      <div className="px-4 py-3 text-sm text-gray-500 flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" /> Searching database...
+                      </div>
+                    ) : apiResults.length > 0 ? (
+                      apiResults.map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleProductSelect(item)}
+                          className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0 transition-colors flex items-center gap-3"
+                        >
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-900">{item.name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{item.brand || "Unknown Brand"}</p>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-gray-500">No products found. Enter manually.</div>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
-                <textarea rows={2} placeholder="Brief description…" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none transition-all" />
+                <textarea 
+                  rows={2} 
+                  value={formDescription}
+                  onChange={e => setFormDescription(e.target.value)}
+                  placeholder="Brief description…" 
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none transition-all" 
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

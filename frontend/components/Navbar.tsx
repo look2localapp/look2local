@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Store, Menu, X, Video, ShoppingBag, Search, User, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Show, UserButton } from "@clerk/nextjs";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -23,8 +24,8 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-              <Store className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden relative border border-gray-100 flex items-center justify-center bg-white">
+              <Image src="/logo.jpeg" alt="Look2Local" fill className="object-cover" />
             </div>
             <span className="font-heading font-extrabold text-lg text-gray-900 hidden sm:block">
               Look2<span className="text-orange-500">Local</span>
