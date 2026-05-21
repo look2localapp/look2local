@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// ─── USERS ────────────────────────────────────────────────
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  role      String   @default("customer") // customer | shopkeeper | admin
+  address   String?
+  mapLink   String?
+  createdAt DateTime @default(now())
+  lockedOffers LockedOffer[]
+}
+
+// ─── SHOPKEEPER PROFILE ────────────────────────────────────
+model Shopkeeper {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  shop         Shop?
+  createdAt    DateTime @default(now())
+}
+
+// ─── SHOP ─────────────────────────────────────────────────
+model Shop {
+  id             String   @id @default(cuid())
+  shop_name      String
+  owner_name     String
+  phone          String
+  address        String
+  landmark       String?
+  google_map_link String
+  shop_image     String   // Cloudinary URL
+  banner_image   String   // Cloudinary URL
+  gst_number     String?
+  gst_verified   Boolean  @default(false)
+  business_name  String?  // fetched from GST API
+  gst_status     String?  // Active | Cancelled etc.
+  category       String
+  opening_hours  String   @default("10:00 AM - 9:00 PM")
+  verified       Boolean  @default(false)
+  delivery_available Boolean @default(false)
+  shopkeeperId   String   @unique
+  shopkeeper     Shopkeeper @relation(fields: [shopkeeperId], references: [id])
+  products       Product[]
+  reels          Reel[]
+  createdAt      DateTime @default(now())
+}
+
+
+// ─── PRODUCT ──────────────────────────────────────────────
+model Product {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  price       Float
+  discount    Float       @default(0)
+  images      String[]    // Cloudinary URLs
+  inStock     Boolean     @default(true)
+  stock       Int         @default(0)
+  shopId      String
+  shop        Shop        @relation(fields: [shopId], references: [id])
+  cardOffers  CardOffer[]
+  lockedOffers LockedOffer[]
+  createdAt   DateTime    @default(now())
+}
+
+// ─── CARD OFFER (BANK OFFERS) ──────────────────────────────
+model CardOffer {
+  id         String  @id @default(cuid())
+  bank_name  String
+  card_type  String  // Credit | Debit | EMI
+  offer_text String
+  min_amount Float   @default(0)
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+}
+
+// ─── LOCKED OFFER (USP) ───────────────────────────────────
+model LockedOffer {
+  id                String   @id @default(cuid())
+  lock_code         String   @unique
+  customer_name     String
+  customer_phone    String
+  customer_address  String
+  customer_map_link String?
+  status            String   @default("LOCKED") // LOCKED | REDEEMED | EXPIRED
+  expiresAt         DateTime
+  lockedAt          DateTime @default(now())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id])
+  productId         String
+  product           Product  @relation(fields: [productId], references: [id])
+}
+
+// ─── REELS ────────────────────────────────────────────────
+model Reel {
+  id         String   @id @default(cuid())
+  video_url  String   // Cloudinary URL
+  thumbnail  String?  // Cloudinary URL
+  caption    String
+  views      Int      @default(0)
+  likes      Int      @default(0)
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  productId  String?  // Optional: tagged product
+  createdAt  DateTime @default(now())
+}
+
+// ─── ORDERS ───────────────────────────────────────────────
+model Order {
+  id        String   @id @default(cuid())
+  status    String   @default("PENDING") // PENDING | CONFIRMED | DELIVERED | CANCELLED
+  type      String   @default("STORE_VISIT") // STORE_VISIT | DELIVERY
+  productId String
+  userId    String
+  createdAt DateTime @default(now())
+}

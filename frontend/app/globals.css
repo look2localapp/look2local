@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* ── Design tokens from UI/UX skill: marketplace/ecommerce ── */
+:root {
+  /* Brand */
+  --color-primary:    #EA580C;
+  --color-secondary:  #F97316;
+  --color-accent:     #2563EB;
+
+  /* Surfaces */
+  --color-background: #F8F9FA;
+  --color-surface:    #FFFFFF;
+  --color-muted:      #F3F4F6;
+  --color-border:     #E5E7EB;
+
+  /* Text */
+  --color-foreground: #0F172A;
+  --color-muted-text: #6B7280;
+
+  /* Semantic */
+  --color-success:    #16A34A;
+  --color-error:      #DC2626;
+  --color-warning:    #D97706;
+
+  /* Fonts */
+  --font-heading: var(--font-rubik), system-ui, sans-serif;
+  --font-body:    var(--font-nunito), system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-primary:    var(--color-primary);
+  --color-secondary:  var(--color-secondary);
+  --color-accent:     var(--color-accent);
+  --color-background: var(--color-background);
+  --font-heading:     var(--font-heading);
+  --font-body:        var(--font-body);
+}
+
+/* ── Base reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* ── Utilities ── */
+.font-heading { font-family: var(--font-heading); }
+.font-body    { font-family: var(--font-body); }
+
+/* hide scrollbar but keep scroll */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Smooth card hover */
+.card-hover {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+}
+
+/* Tab active indicator */
+.tab-active {
+  position: relative;
+}
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: 2px;
+}
