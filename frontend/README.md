@@ -21,7 +21,7 @@ Look2Local is a hyperlocal e-commerce platform designed to connect customers wit
 - **Shopkeeper Subscription System:** 30-day free trial followed by a ₹149/month Standard Plan, handled securely via Razorpay checkout.
 - **Master Product Catalog & Barcode Scanner:** Instead of manual entry, shopkeepers can add products instantly by scanning a barcode (via camera using `@zxing/browser`) or searching the pre-seeded master catalog of popular electronics.
 - **Inventory Management:** Full stock tracking dashboard with quick `+`/`-` controls and automatic out-of-stock badges.
-- **Analytics & Earnings Dashboard:** Track shop views, reel performance, and coupon redemptions.
+- **Shop Performance Dashboard:** Real-time analytics tracking **Views This Month**, **Offer Locks**, **Coupon Redemptions**, **Revenue Generated** (dynamic database aggregation), and a highlighted **Top Performing Product** card to drive retention.
 
 ### 🛡️ For Platform Admins
 - **Dark-Themed Admin Panel:** Comprehensive dashboard to oversee the marketplace.

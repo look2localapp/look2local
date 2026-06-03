@@ -25,6 +25,10 @@ interface StatsData {
   lockedOffersCount: number;
   redeemedCouponsCount: number;
   totalViews: number;
+  viewsThisMonth: number;
+  revenueGenerated: number;
+  topProduct: string;
+  totalLocksCount: number;
 }
 
 interface LockItem {
@@ -51,6 +55,10 @@ export default function ShopkeeperDashboard() {
     lockedOffersCount: 0,
     redeemedCouponsCount: 0,
     totalViews: 0,
+    viewsThisMonth: 0,
+    revenueGenerated: 0,
+    topProduct: "None",
+    totalLocksCount: 0,
   });
   const [recentLocks, setRecentLocks] = useState<LockItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,10 +92,10 @@ export default function ShopkeeperDashboard() {
   };
 
   const statCards = [
-    { label: "Active Offers", value: stats.activeProducts, sub: "Listed in shop", icon: Lock, color: "bg-blue-50 text-blue-600" },
-    { label: "Locked Offers", value: stats.lockedOffersCount, sub: "Awaiting visits", icon: ShoppingBag, color: "bg-orange-50 text-orange-600" },
-    { label: "Coupon Redemptions", value: stats.redeemedCouponsCount, sub: "Used in store", icon: Ticket, color: "bg-green-50 text-green-600" },
-    { label: "Total Views", value: stats.totalViews.toLocaleString("en-IN"), sub: "Profile & Reels", icon: Eye, color: "bg-purple-50 text-purple-600" },
+    { label: "Views This Month", value: stats.viewsThisMonth?.toLocaleString("en-IN") || "0", sub: "Profile & Reels", icon: Eye, color: "bg-purple-50 text-purple-600" },
+    { label: "Offer Locks", value: stats.totalLocksCount || 0, sub: `${stats.lockedOffersCount || 0} active locks`, icon: Lock, color: "bg-orange-50 text-orange-600" },
+    { label: "Coupon Redemptions", value: stats.redeemedCouponsCount || 0, sub: "Successful visits", icon: Ticket, color: "bg-green-50 text-green-600" },
+    { label: "Revenue Generated", value: `₹${(stats.revenueGenerated || 0).toLocaleString("en-IN")}`, sub: "From sales", icon: BarChart3, color: "bg-blue-50 text-blue-600" },
   ];
 
   if (loading) {
@@ -172,59 +180,105 @@ export default function ShopkeeperDashboard() {
             ))}
           </div>
 
-          {/* Recent Locks */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-50">
-              <h2 className="font-bold text-gray-900">Recent Customer Activity</h2>
-              <Link href="/shopkeeper/orders" className="text-sm text-blue-600 font-semibold flex items-center gap-1 hover:underline">
-                View All <ArrowUpRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-            <div className="overflow-x-auto">
-              {recentLocks.length === 0 ? (
-                <div className="text-center py-12">
-                  <ShoppingBag className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-400 font-semibold">No recent customer activity</p>
+          {/* Dashboard Main Grid (Locks & Performance) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Recent Locks (col-span-2) */}
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center px-6 py-4 border-b border-gray-50">
+                  <h2 className="font-bold text-gray-900">Recent Customer Activity</h2>
+                  <Link href="/shopkeeper/orders" className="text-sm text-blue-600 font-semibold flex items-center gap-1 hover:underline">
+                    View All <ArrowUpRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
-              ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-xs text-gray-400 uppercase font-semibold bg-gray-50/50 border-b border-gray-50">
-                      <th className="px-6 py-3 text-left">Customer</th>
-                      <th className="px-6 py-3 text-left">Product</th>
-                      <th className="px-6 py-3 text-left">Code</th>
-                      <th className="px-6 py-3 text-left">Type</th>
-                      <th className="px-6 py-3 text-left">Amount</th>
-                      <th className="px-6 py-3 text-left">Expires</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {recentLocks.map((lock) => (
-                      <tr key={lock.code} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-gray-900 text-sm">{lock.customer}</p>
-                          <p className="text-xs text-gray-400">{lock.phone}</p>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600 max-w-[160px] truncate">{lock.product}</td>
-                        <td className="px-6 py-4">
-                          <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg text-xs">{lock.code}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-green-50 text-green-700">
-                            Store Visit
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-bold text-gray-900 text-sm">₹{lock.amount.toLocaleString("en-IN")}</td>
-                        <td className="px-6 py-4">
-                          <span className={`text-xs font-semibold flex items-center gap-1 ${lock.status === "LOCKED" ? "text-orange-600" : "text-gray-400"}`}>
-                            <Clock className="w-3 h-3" /> {lock.status === "LOCKED" ? lock.expiresIn : lock.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                <div className="overflow-x-auto">
+                  {recentLocks.length === 0 ? (
+                    <div className="text-center py-12">
+                      <ShoppingBag className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-400 font-semibold">No recent customer activity</p>
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-xs text-gray-400 uppercase font-semibold bg-gray-50/50 border-b border-gray-50">
+                          <th className="px-6 py-3 text-left">Customer</th>
+                          <th className="px-6 py-3 text-left">Product</th>
+                          <th className="px-6 py-3 text-left">Code</th>
+                          <th className="px-6 py-3 text-left">Type</th>
+                          <th className="px-6 py-3 text-left">Amount</th>
+                          <th className="px-6 py-3 text-left">Expires</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {recentLocks.map((lock) => (
+                          <tr key={lock.code} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <p className="font-semibold text-gray-900 text-sm">{lock.customer}</p>
+                              <p className="text-xs text-gray-400">{lock.phone}</p>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600 max-w-[160px] truncate">{lock.product}</td>
+                            <td className="px-6 py-4">
+                              <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg text-xs">{lock.code}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-green-50 text-green-700">
+                                Store Visit
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 font-bold text-gray-900 text-sm">₹{lock.amount.toLocaleString("en-IN")}</td>
+                            <td className="px-6 py-4">
+                              <span className={`text-xs font-semibold flex items-center gap-1 ${lock.status === "LOCKED" ? "text-orange-600" : "text-gray-400"}`}>
+                                <Clock className="w-3 h-3" /> {lock.status === "LOCKED" ? lock.expiresIn : lock.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Performance Sidebar (col-span-1) */}
+            <div className="flex flex-col gap-6">
+              {/* Top Performing Product Card */}
+              <div className="bg-gradient-to-br from-gray-900 via-indigo-950 to-slate-900 text-white rounded-2xl border border-indigo-950 p-6 shadow-md relative overflow-hidden flex flex-col justify-between min-h-[200px]">
+                <div className="absolute right-0 top-0 w-28 h-28 bg-white/5 rounded-full animate-pulse" />
+                <div className="absolute -left-6 -bottom-6 w-16 h-16 bg-white/5 rounded-full" />
+                <div className="relative">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-full border border-indigo-500/30">
+                    🏆 Top Product
+                  </span>
+                  <h3 className="font-black text-lg mt-3 text-white line-clamp-2 leading-snug">{stats.topProduct}</h3>
+                </div>
+                <div className="relative mt-6 pt-4 border-t border-white/10 flex justify-between items-end">
+                  <div>
+                    <p className="text-[10px] text-indigo-200 font-semibold uppercase tracking-wider">Revenue Earned</p>
+                    <p className="text-2xl font-black text-white mt-0.5">₹{(stats.revenueGenerated || 0).toLocaleString("en-IN")}</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2.5 py-1 rounded-xl border border-green-500/20 flex items-center gap-0.5 shadow-sm">
+                    <ArrowUpRight className="w-3.5 h-3.5" /> Growth Active
+                  </span>
+                </div>
+              </div>
+
+              {/* Performance Tip Card */}
+              <div className="bg-white rounded-2xl border border-gray-150 p-6 shadow-sm flex-1 flex flex-col justify-between min-h-[160px]">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1.5 flex items-center gap-1.5">
+                    💡 Retention Tip
+                  </h3>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Products with high coupon savings drive 3x more store visits. Try adding more local bank card offers to keep your product visibility high!
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between">
+                  <Link href="/shopkeeper/products" className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-0.5">
+                    Configure Offers <ArrowUpRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
 
