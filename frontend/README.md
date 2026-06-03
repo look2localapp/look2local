@@ -33,9 +33,29 @@ Look2Local is a hyperlocal e-commerce platform designed to connect customers wit
 - **Modern E-commerce UI:** Fully responsive, Flipkart/Blinkit style interface built with a cohesive design system (Orange/Blue palette).
 - **Custom Authentication Flow (Clerk):** Secure authentication separating customers and shopkeepers. No forced phone numbers at signup.
 - **Database & ORM:** Powered by Prisma ORM and Neon Serverless PostgreSQL.
+### Platform Technical Foundation
 - **Anti-Fraud & Security:** Advanced coupon abuse prevention (single-use limits, shop-scoped redemptions, and real-time QR validation).
 - **Type Safety & Build:** 100% strict TypeScript compliance with zero Next.js production build warnings.
 - **Image Uploads:** Cloudinary integration for shop, product, and profile images.
+
+---
+
+## 🛠️ New Trial, Pricing & Reviews System
+
+### 🏪 Shopkeeper trial & Standard Plan
+- **30-Day Onboarding**: Trial period is set to 30 days, giving local shops ample time to set up products, configure mapped listings, and receive customer redemptions before upgrading.
+- **₹149/mo Standard Plan**: Upgrading from the free trial to the standard plan is priced at ₹149/month (utilizing psychological pricing theory for higher shopkeeper conversion). Checkout is processed via Razorpay.
+
+### ⭐ Verified Customer Reviews System
+To establish trust between local stores and customers, a reviews system has been implemented:
+1. **Purchase Validation**: Customers can only submit reviews for shops and products they have actually redeemed coupons for, preventing review spam.
+2. **One Review per Transaction**: The database enforces a unique constraint (`Review.couponId`), ensuring each transaction can only be reviewed once.
+3. **3-Day Cooling Period**: Customers are prompted to review their experience exactly **3 days** after their coupon is marked as redeemed. If they attempt to review earlier, the UI shows a lock countdown.
+4. **Developer/Tester Time Simulation**: A built-in debug button **"Simulate 3 Days Passed"** is provided next to redeemed coupons in the customer dashboard. This instantly backdates the redemption time in the database for swift testing.
+5. **Shop Trust Display**: Reviews are rendered dynamically on the shop detail page with:
+   - Green **"Verified Purchase"** badges.
+   - Specific item purchase details (e.g. *Bought: iPhone 16*).
+   - Dynamically re-calculated shop average star ratings and rating-distribution histograms.
 
 ---
 
