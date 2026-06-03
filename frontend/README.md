@@ -1,54 +1,84 @@
 # Look2Local — India's Hyperlocal Marketplace 🛒
 
-Look2Local is a hyperlocal e-commerce platform designed to connect customers with local neighborhood shops. It allows users to discover local deals, lock prices before visiting a store, and ensures all businesses are GST-verified. 
+Look2Local is a hyperlocal e-commerce platform designed to connect customers with local neighborhood shops. It allows users to discover local deals, lock prices before visiting a store, purchase discount coupons, and ensures all businesses are verified. 
 
 ## 🚀 Key Features Implemented
 
-- **Modern E-commerce UI:** Fully responsive, Flipkart/Blinkit style interface built with a cohesive design system (Orange/Blue palette, Rubik & Nunito Sans fonts).
-- **Free Map Integration:** Fully migrated from paid Google Maps to free **OpenStreetMap (OSM)** and **react-leaflet**. Zero billing requirements for map visualization and directions.
-- **Dual Location Picker:** Users can use their device's GPS (with Nominatim reverse geocoding to city name) or manually search and select from a list of Indian cities.
-- **Custom Authentication Flow (Clerk):**
-  - **Sign Up:** Email & Password only → OTP Verification → Done. No phone number or username forced at sign-up.
-  - **Sign In:** Email & Password only.
-  - **Post-Login Profile Completion:** Users are prompted to add their phone number and name *after* signing in. The phone number is stored purely as profile metadata for deal-related contact, not for authentication.
+### 👥 For Customers
+- **Customer Coupon System:** Dynamic pricing for coupons where users can pay a small amount (e.g., ₹50) to get a high discount (e.g., ₹300) when visiting a shop. Integrated with Razorpay.
+- **My Coupons & Savings Dashboard:** Track purchased coupons, view QR codes for redemption, and see total money saved this month.
+- **Wishlist & Price Alerts:** Save favorite products, track their prices, and lock prices directly from the wishlist.
+- **Comprehensive Profile Management:** Customers can manage their profile, upload a photo, and set their exact location via device GPS for better local discovery.
+- **Dual Location Picker:** Use device GPS (with Nominatim reverse geocoding to city name) or manually search and select from a list of Indian cities.
+- **Free Map Integration:** Map features migrated from paid Google Maps to free **OpenStreetMap (OSM)** and **react-leaflet**.
+
+### 🏪 For Shopkeepers
+- **Shopkeeper Subscription System:** 10-day free trial followed by a ₹150/month Standard Plan, handled securely via Razorpay checkout.
+- **Master Product Catalog & Barcode Scanner:** Instead of manual entry, shopkeepers can add products instantly by scanning a barcode (via camera using `@zxing/browser`) or searching the pre-seeded master catalog of popular electronics.
+- **Inventory Management:** Full stock tracking dashboard with quick `+`/`-` controls and automatic out-of-stock badges.
+- **Analytics & Earnings Dashboard:** Track shop views, reel performance, and coupon redemptions.
+
+### 🛡️ For Platform Admins
+- **Dark-Themed Admin Panel:** Comprehensive dashboard to oversee the marketplace.
+- **Shop Approvals & GST Verification:** Review newly registered shops and verify their GST credentials.
+- **Revenue Tracking:** Monitor platform earnings from subscriptions and coupon sales.
+- **Customer Management:** View active customer metrics and activity.
+
+### ⚙️ Core Technical Features
+- **Modern E-commerce UI:** Fully responsive, Flipkart/Blinkit style interface built with a cohesive design system (Orange/Blue palette).
+- **Custom Authentication Flow (Clerk):** Secure authentication separating customers and shopkeepers. No forced phone numbers at signup.
 - **Database & ORM:** Powered by Prisma ORM and Neon Serverless PostgreSQL.
-- **Image Uploads:** Cloudinary integration for shop and product images.
+- **Image Uploads:** Cloudinary integration for shop, product, and profile images.
+
+---
 
 ## 🛠️ Tech Stack
 
-- **Framework:** Next.js 15 (App Router)
+- **Framework:** Next.js 16 (App Router)
 - **Styling:** Tailwind CSS + Custom Design System
 - **Database:** Neon PostgreSQL
-- **ORM:** Prisma
+- **ORM:** Prisma v7
 - **Authentication:** Clerk
+- **Payments:** Razorpay
 - **Maps:** Leaflet & OpenStreetMap (OSM)
 - **Image Hosting:** Cloudinary
+- **Barcode Scanning:** ZXing (`@zxing/browser`)
 - **Icons:** Lucide React
+
+---
 
 ## 📂 Project Structure
 
 ```
 frontend/
 ├── app/
-│   ├── layout.tsx         # Global layout (Fonts, ClerkProvider, ProfileModalWrapper)
+│   ├── layout.tsx         # Global layout (Fonts, ClerkProvider)
 │   ├── page.tsx           # Homepage (Hero, Categories, Location Picker, Live Offers)
 │   ├── globals.css        # Design system tokens and Tailwind styles
 │   ├── sign-in/           # Custom Clerk Sign-In Page
 │   ├── sign-up/           # Custom Clerk Sign-Up Page
-│   ├── profile/           # User Profile Management Page
-│   ├── shops/             # Shop listings and individual shop details (MapView)
-│   └── shopkeeper/        # Shopkeeper portal (Register, Dashboard, Products)
+│   ├── profile/           # User Profile Management, Coupons, & Wishlist
+│   ├── shops/             # Shop listings and individual shop details
+│   ├── shopkeeper/        # Shopkeeper portal (Dashboard, Inventory, Subscription)
+│   └── admin/             # Admin Panel (Stats, Shops, Customers, Payments)
 ├── components/
-│   ├── CompleteProfileModal.tsx # Post-login modal for collecting Phone/Name
-│   ├── Navbar.tsx         # Global navigation with search and auth links
-│   ├── MapView.tsx        # Single shop OSM iframe map component
-│   ├── NearbyShopsMap.tsx # Leaflet map for visualizing multiple shops
-│   └── ImageUpload.tsx    # Cloudinary image upload component
+│   ├── Navbar.tsx         # Global navigation with search and profile links
+│   ├── MasterCatalogSearch# Autocomplete product search
+│   ├── BarcodeScanner.tsx # Camera-based barcode scanner
+│   ├── CouponPurchaseModal# Razorpay coupon checkout
+│   └── SubscriptionBanner # Expiry warnings for shopkeepers
+├── lib/
+│   ├── prisma.ts          # Singleton Prisma Client
+│   ├── razorpay.ts        # Payment gateway utility
+│   └── couponCalculator.ts# Dynamic ROI and coupon pricing logic
 ├── prisma/
-│   └── schema.prisma      # Database models (User, Shop, Product, Order)
+│   ├── schema.prisma      # Database models
+│   └── seed.ts            # Script to seed the master catalog (~100 products)
 ├── public/                # Static assets
-└── .env                   # Environment variables (see below)
+└── .env                   # Environment variables
 ```
+
+---
 
 ## 🔑 Environment Variables (.env)
 
@@ -57,11 +87,9 @@ To run this project, you will need to set up the following environment variables
 ```env
 # ─── DATABASE (Neon PostgreSQL) ────────────────────────────
 DATABASE_URL="postgresql://<user>:<password>@<host>/neondb?sslmode=require"
-DIRECT_URL="postgresql://<user>:<password>@<host>/neondb?sslmode=require"
 
 # ─── CLERK AUTH ─────────────────────────────────────────────
 # Get from: https://dashboard.clerk.com → Your App → API Keys
-# Make sure to set Email/Password to ON, and Username/Phone to OFF in the Clerk Dashboard.
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 
@@ -80,11 +108,19 @@ CLOUDINARY_API_SECRET=your_api_secret
 SANDBOX_API_KEY=key_live_...
 SANDBOX_SECRET_KEY=secret_live_...
 
-# ─── MAPS ──────────────────────────────────────────────────
-# Note: Google Maps is no longer required as the app uses OpenStreetMap.
-# You can leave this blank or remove it.
-NEXT_PUBLIC_GOOGLE_MAPS_KEY=
+# ─── RAZORPAY PAYMENT GATEWAY ──────────────────────────────
+# Get from: https://dashboard.razorpay.com → Settings → API Keys
+RAZORPAY_KEY_ID=rzp_test_YOUR_KEY_HERE
+RAZORPAY_KEY_SECRET=YOUR_SECRET_HERE
+NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_YOUR_KEY_HERE
+
+# ─── ADMIN ACCESS ───────────────────────────────────────────
+# Comma-separated Clerk user IDs who have admin access
+# Get your Clerk user ID from: https://dashboard.clerk.com → Users
+ADMIN_CLERK_IDS=user_YOUR_CLERK_ID_HERE
 ```
+
+---
 
 ## 🏃‍♂️ Running the Project locally
 
@@ -93,17 +129,21 @@ NEXT_PUBLIC_GOOGLE_MAPS_KEY=
    npm install
    ```
 
-2. **Run Prisma Migrations (if database schema changed):**
+2. **Generate Prisma Client & Push Schema:**
    ```bash
+   npx prisma generate
    npx prisma db push
-   # or
-   npx prisma migrate dev
    ```
 
-3. **Start the Development Server:**
+3. **Seed the Database (Master Catalog):**
+   ```bash
+   npm run seed
+   ```
+
+4. **Start the Development Server:**
    ```bash
    npm run dev
    ```
 
-4. **Open in Browser:**
+5. **Open in Browser:**
    Visit [http://localhost:3000](http://localhost:3000)
