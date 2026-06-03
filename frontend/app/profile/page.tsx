@@ -7,7 +7,7 @@ import Image from "next/image";
 import {
   User, Phone, Mail, MapPin, Camera, Save, ArrowLeft,
   Navigation, Edit2, CheckCircle2, Ticket, Heart,
-  ChevronRight, Bell
+  ChevronRight, Bell, Gift
 } from "lucide-react";
 
 interface Profile {
@@ -21,6 +21,9 @@ interface Profile {
   latitude?: number;
   longitude?: number;
   profilePhoto?: string;
+  referralCode?: string;
+  referralBalance?: number;
+  referredById?: string | null;
 }
 
 export default function CustomerProfilePage() {
@@ -36,8 +39,14 @@ export default function CustomerProfilePage() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
-  useEffect(() => {
-    if (!isSignedIn) { router.push("/sign-in"); return; }
+  // Referral UI State
+  const [refCodeInput, setRefCodeInput] = useState("");
+  const [refSubmitting, setRefSubmitting] = useState(false);
+  const [refError, setRefError] = useState("");
+  const [refSuccess, setRefSuccess] = useState("");
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const fetchProfileData = () => {
     fetch("/api/customer/profile")
       .then((r) => r.json())
       .then((d) => {
@@ -45,6 +54,44 @@ export default function CustomerProfilePage() {
         setForm(d.profile || {});
         setLoading(false);
       });
+  };
+
+  const copyReferralCode = () => {
+    if (!profile?.referralCode) return;
+    navigator.clipboard.writeText(profile.referralCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleApplyReferral = async () => {
+    if (!refCodeInput.trim()) return;
+    setRefSubmitting(true);
+    setRefError("");
+    setRefSuccess("");
+    try {
+      const res = await fetch("/api/customer/referral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referralCode: refCodeInput }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setRefSuccess(data.message);
+        setRefCodeInput("");
+        fetchProfileData(); // reload profile to show changes
+      } else {
+        setRefError(data.error || "Failed to apply referral code.");
+      }
+    } catch {
+      setRefError("Network error.");
+    } finally {
+      setRefSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isSignedIn) { router.push("/sign-in"); return; }
+    fetchProfileData();
   }, [isSignedIn, router]);
 
   const handleGetLocation = () => {
@@ -238,24 +285,93 @@ export default function CustomerProfilePage() {
         )}
 
         {!editMode && profile && (
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-            <div className="space-y-4">
-              {[
-                { icon: User, label: "Full Name", value: profile.name },
-                { icon: Phone, label: "Phone", value: profile.phone || "Not set" },
-                { icon: Mail, label: "Email", value: profile.email },
-                { icon: MapPin, label: "Address", value: [profile.address, profile.city, profile.pincode].filter(Boolean).join(", ") || "Not set" },
-              ].map(({ icon: Icon, label, value }) => (
-                <div key={label} className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Icon className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400 font-medium">{label}</p>
-                    <p className="text-sm font-semibold text-gray-900 mt-0.5">{value}</p>
+          <div className="space-y-5">
+            {/* Referral System Card */}
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-24 h-24 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-xl pointer-events-none" />
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
+                  <Gift className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">Refer & Earn Program</h3>
+                  <p className="text-xs text-gray-400">Share with friends to earn coupon credits</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-purple-50/50 rounded-2xl p-4 border border-purple-100/50">
+                  <p className="text-[10px] text-purple-600 font-semibold uppercase tracking-wider mb-0.5">My Invite Code</p>
+                  <div className="flex items-center justify-between gap-1.5 mt-1">
+                    <span className="font-mono font-black text-purple-900 text-sm">{profile.referralCode || "N/A"}</span>
+                    <button
+                      onClick={copyReferralCode}
+                      className="px-2 py-1 bg-white hover:bg-purple-100 text-[10px] text-purple-700 font-bold rounded-lg border border-purple-200 transition-colors"
+                    >
+                      {copiedCode ? "Copied ✓" : "Copy"}
+                    </button>
                   </div>
                 </div>
-              ))}
+                
+                <div className="bg-pink-50/50 rounded-2xl p-4 border border-pink-100/50">
+                  <p className="text-[10px] text-pink-600 font-semibold uppercase tracking-wider mb-0.5">Coupon Credits</p>
+                  <p className="text-xl font-black text-pink-700 mt-1">
+                    ₹{profile.referralBalance || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Enter referral code section if not referred yet */}
+              {!profile.referredById ? (
+                <div className="border-t border-gray-50 pt-4 mt-3">
+                  <p className="text-xs text-gray-500 font-medium mb-2">Were you invited? Enter invite code:</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={refCodeInput}
+                      onChange={(e) => setRefCodeInput(e.target.value.toUpperCase())}
+                      placeholder="e.g. RAHU-8832"
+                      className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono tracking-wider uppercase focus:outline-none focus:bg-white focus:border-purple-400"
+                    />
+                    <button
+                      onClick={handleApplyReferral}
+                      disabled={refSubmitting || !refCodeInput.trim()}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm disabled:opacity-50"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  {refError && <p className="text-xs text-red-500 font-medium mt-2">✕ {refError}</p>}
+                  {refSuccess && <p className="text-xs text-green-600 font-medium mt-2">✓ {refSuccess}</p>}
+                </div>
+              ) : (
+                <div className="border-t border-gray-50 pt-3 mt-3 flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" /> Referral program linked successfully!
+                </div>
+              )}
+            </div>
+
+            {/* Profile Fields Card */}
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+              <div className="space-y-4">
+                {[
+                  { icon: User, label: "Full Name", value: profile.name },
+                  { icon: Phone, label: "Phone", value: profile.phone || "Not set" },
+                  { icon: Mail, label: "Email", value: profile.email },
+                  { icon: MapPin, label: "Address", value: [profile.address, profile.city, profile.pincode].filter(Boolean).join(", ") || "Not set" },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Icon className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 font-medium">{label}</p>
+                      <p className="text-sm font-semibold text-gray-900 mt-0.5">{value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

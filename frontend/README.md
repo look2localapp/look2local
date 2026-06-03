@@ -7,12 +7,16 @@ Look2Local is a hyperlocal e-commerce platform designed to connect customers wit
 ### 👥 For Customers
 - **Customer Coupon System:** Dynamic pricing for coupons where users can pay a small amount (e.g., ₹50) to get a high discount (e.g., ₹300) when visiting a shop. Integrated with Razorpay.
 - **My Coupons & Savings Dashboard:** Track purchased coupons, view QR codes for redemption, and see total money saved this month.
+- **Shop & Card Comparison (Homepage Hero Feature):** Search products on the homepage hero and instantly compare prices and real-time GPS distances across local stores. Includes HDFC, ICICI, and SBI bank card effective pricing calculations.
+- **Referral Rewards Program:** Share invite codes (e.g., `RAHU-8832`) with friends. The inviter receives ₹25 credit on signup, which can be applied for direct discounts or free coupon redemptions.
 - **Wishlist & Price Alerts:** Save favorite products, track their prices, and lock prices directly from the wishlist.
 - **Comprehensive Profile Management:** Customers can manage their profile, upload a photo, and set their exact location via device GPS for better local discovery.
 - **Dual Location Picker:** Use device GPS (with Nominatim reverse geocoding to city name) or manually search and select from a list of Indian cities.
 - **Free Map Integration:** Map features migrated from paid Google Maps to free **OpenStreetMap (OSM)** and **react-leaflet**.
 
 ### 🏪 For Shopkeepers
+- **One-Time Coupon Redemption Scanner:** Secure QR Code scanner (using `@zxing/browser`) and manual input validation inside the Shopkeeper Portal. Enforces one-time redemption status updates in the database to prevent abuse or screenshot sharing.
+- **Shop Trust Score & Verification Badges:** Show calculated star ratings, Aadhaar Verified badges, GST Verified badges, and historical successful order counts (e.g., "50 successful orders") to build credibility.
 - **Shopkeeper Subscription System:** 10-day free trial followed by a ₹150/month Standard Plan, handled securely via Razorpay checkout.
 - **Master Product Catalog & Barcode Scanner:** Instead of manual entry, shopkeepers can add products instantly by scanning a barcode (via camera using `@zxing/browser`) or searching the pre-seeded master catalog of popular electronics.
 - **Inventory Management:** Full stock tracking dashboard with quick `+`/`-` controls and automatic out-of-stock badges.

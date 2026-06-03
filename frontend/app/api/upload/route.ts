@@ -78,10 +78,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 });
   }
 }
-
-// Set max body size for large video uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

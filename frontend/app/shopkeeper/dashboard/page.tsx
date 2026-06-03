@@ -2,45 +2,104 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   BarChart3, Package, Video, Settings, Store,
-  TrendingUp, Eye, Lock, ShoppingBag, PlusCircle,
+  Eye, Lock, ShoppingBag, PlusCircle,
   Bell, MapPin, ArrowUpRight, Truck, Clock,
-  AlertTriangle, Trash2, X
+  AlertTriangle, Trash2, X, QrCode, CheckCircle2, Ticket, Loader2
 } from "lucide-react";
-
-const STATS = [
-  { label: "Active Offers", value: "12", sub: "+2 this week", icon: Lock, color: "bg-blue-50 text-blue-600" },
-  { label: "Locked Offers", value: "48", sub: "8 pending visits", icon: ShoppingBag, color: "bg-orange-50 text-orange-600" },
-  { label: "Total Views", value: "1.2K", sub: "+15% vs last week", icon: Eye, color: "bg-green-50 text-green-600" },
-  { label: "Delivery Orders", value: "6", sub: "3 confirmed", icon: Truck, color: "bg-purple-50 text-purple-600" },
-];
-
-const RECENT_LOCKS = [
-  { product: "Sony PlayStation 5", customer: "Vijay K.", phone: "98765 43210", code: "L2L-X7A9M", amount: 44990, expiresIn: "1h 15m", type: "Store Visit" },
-  { product: "Apple AirPods Pro", customer: "Priya S.", phone: "90123 45678", code: "L2L-B3Q8N", amount: 21500, expiresIn: "42m", type: "Delivery" },
-  { product: "Samsung 4K TV", customer: "Arjun M.", phone: "87654 32109", code: "L2L-K5R2P", amount: 49900, expiresIn: "2h 58m", type: "Store Visit" },
-];
 
 const NAV = [
   { icon: BarChart3, label: "Overview", href: "/shopkeeper/dashboard", active: true },
   { icon: Package, label: "Products", href: "/shopkeeper/products" },
-  { icon: Video, label: "Reels", href: "/shopkeeper/reels" },
   { icon: ShoppingBag, label: "Orders", href: "/shopkeeper/orders" },
+  { icon: QrCode, label: "Redeem Coupon", href: "/shopkeeper/redeem" },
+  { icon: Video, label: "Reels", href: "/shopkeeper/reels" },
   { icon: BarChart3, label: "Analytics", href: "/shopkeeper/analytics" },
-  { icon: Settings, label: "Settings", href: "/shopkeeper/dashboard" },
 ];
+
+interface StatsData {
+  activeProducts: number;
+  lockedOffersCount: number;
+  redeemedCouponsCount: number;
+  totalViews: number;
+}
+
+interface LockItem {
+  id: string;
+  product: string;
+  customer: string;
+  phone: string;
+  code: string;
+  amount: number;
+  expiresIn: string;
+  status: string;
+}
 
 export default function ShopkeeperDashboard() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const router = useRouter();
+  
+  // Dynamic DB states
+  const [shopName, setShopName] = useState("My Shop");
+  const [verified, setVerified] = useState(false);
+  const [address, setAddress] = useState("");
+  const [stats, setStats] = useState<StatsData>({
+    activeProducts: 0,
+    lockedOffersCount: 0,
+    redeemedCouponsCount: 0,
+    totalViews: 0,
+  });
+  const [recentLocks, setRecentLocks] = useState<LockItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const res = await fetch("/api/shopkeeper/stats");
+        if (res.ok) {
+          const data = await res.json();
+          setShopName(data.shopName || "My Shop");
+          setVerified(data.verified || false);
+          setAddress(data.address || "");
+          setStats(data.stats);
+          setRecentLocks(data.recentLocks);
+        } else if (res.status === 401) {
+          router.push("/shopkeeper/login");
+        }
+      } catch (err) {
+        console.error("Dashboard stats load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadStats();
+  }, [router]);
 
   const handleDeleteShop = () => {
     // Simulate shop deletion and logout
     router.push("/shopkeeper/login");
   };
+
+  const statCards = [
+    { label: "Active Offers", value: stats.activeProducts, sub: "Listed in shop", icon: Lock, color: "bg-blue-50 text-blue-600" },
+    { label: "Locked Offers", value: stats.lockedOffersCount, sub: "Awaiting visits", icon: ShoppingBag, color: "bg-orange-50 text-orange-600" },
+    { label: "Coupon Redemptions", value: stats.redeemedCouponsCount, sub: "Used in store", icon: Ticket, color: "bg-green-50 text-green-600" },
+    { label: "Total Views", value: stats.totalViews.toLocaleString("en-IN"), sub: "Profile & Reels", icon: Eye, color: "bg-purple-50 text-purple-600" },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-64px)] bg-gray-50">
@@ -51,13 +110,15 @@ export default function ShopkeeperDashboard() {
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
               <Store className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <p className="font-bold text-sm text-white">Tech Hub Electronics</p>
-              <span className="text-[11px] font-semibold text-green-400 flex items-center gap-1">✓ Verified Seller</span>
+            <div className="min-w-0">
+              <p className="font-bold text-sm text-white truncate">{shopName}</p>
+              <span className={`text-[11px] font-semibold flex items-center gap-1 ${verified ? "text-green-400" : "text-amber-400"}`}>
+                {verified ? "✓ Verified Seller" : "Pending Verification"}
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 mt-3 text-xs text-gray-400">
-            <MapPin className="w-3 h-3" /> Banjara Hills, Hyderabad
+          <div className="flex items-center gap-1.5 mt-3 text-xs text-gray-400 truncate">
+            <MapPin className="w-3 h-3 flex-shrink-0" /> {address || "Hyderabad"}
           </div>
         </div>
 
@@ -70,9 +131,6 @@ export default function ShopkeeperDashboard() {
         </nav>
 
         <div className="p-4 border-t border-white/10 space-y-2">
-          <Link href="/shops/1" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors">
-            <Eye className="w-4 h-4" /> View My Shop
-          </Link>
           <Link href="/shopkeeper/login" className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 px-3 py-2.5 rounded-xl hover:bg-red-500/10 transition-colors">
             → Sign Out
           </Link>
@@ -90,10 +148,9 @@ export default function ShopkeeperDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
+            <Link href="/shopkeeper/redeem" className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors shadow-sm shadow-green-100">
+              <QrCode className="w-4 h-4" /> Redeem Coupon
+            </Link>
             <Link href="/shopkeeper/products" className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm">
               <PlusCircle className="w-4 h-4" /> Add Product
             </Link>
@@ -103,7 +160,7 @@ export default function ShopkeeperDashboard() {
         <div className="p-6 lg:p-8">
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {STATS.map(({ label, value, sub, icon: Icon, color }) => (
+            {statCards.map(({ label, value, sub, icon: Icon, color }) => (
               <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
                   <Icon className="w-5 h-5" />
@@ -118,49 +175,56 @@ export default function ShopkeeperDashboard() {
           {/* Recent Locks */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-50">
-              <h2 className="font-bold text-gray-900">Recent Offer Locks</h2>
+              <h2 className="font-bold text-gray-900">Recent Customer Activity</h2>
               <Link href="/shopkeeper/orders" className="text-sm text-blue-600 font-semibold flex items-center gap-1 hover:underline">
                 View All <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-xs text-gray-400 uppercase font-semibold bg-gray-50/50 border-b border-gray-50">
-                    <th className="px-6 py-3 text-left">Customer</th>
-                    <th className="px-6 py-3 text-left">Product</th>
-                    <th className="px-6 py-3 text-left">Code</th>
-                    <th className="px-6 py-3 text-left">Type</th>
-                    <th className="px-6 py-3 text-left">Amount</th>
-                    <th className="px-6 py-3 text-left">Expires</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {RECENT_LOCKS.map((lock) => (
-                    <tr key={lock.code} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="font-semibold text-gray-900 text-sm">{lock.customer}</p>
-                        <p className="text-xs text-gray-400">{lock.phone}</p>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 max-w-[160px] truncate">{lock.product}</td>
-                      <td className="px-6 py-4">
-                        <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg text-xs">{lock.code}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${lock.type === "Delivery" ? "bg-purple-50 text-purple-700" : "bg-green-50 text-green-700"}`}>
-                          {lock.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 font-bold text-gray-900 text-sm">₹{lock.amount.toLocaleString("en-IN")}</td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs text-orange-600 font-semibold flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {lock.expiresIn}
-                        </span>
-                      </td>
+              {recentLocks.length === 0 ? (
+                <div className="text-center py-12">
+                  <ShoppingBag className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-400 font-semibold">No recent customer activity</p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-xs text-gray-400 uppercase font-semibold bg-gray-50/50 border-b border-gray-50">
+                      <th className="px-6 py-3 text-left">Customer</th>
+                      <th className="px-6 py-3 text-left">Product</th>
+                      <th className="px-6 py-3 text-left">Code</th>
+                      <th className="px-6 py-3 text-left">Type</th>
+                      <th className="px-6 py-3 text-left">Amount</th>
+                      <th className="px-6 py-3 text-left">Expires</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {recentLocks.map((lock) => (
+                      <tr key={lock.code} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-gray-900 text-sm">{lock.customer}</p>
+                          <p className="text-xs text-gray-400">{lock.phone}</p>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 max-w-[160px] truncate">{lock.product}</td>
+                        <td className="px-6 py-4">
+                          <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg text-xs">{lock.code}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-green-50 text-green-700">
+                            Store Visit
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-bold text-gray-900 text-sm">₹{lock.amount.toLocaleString("en-IN")}</td>
+                        <td className="px-6 py-4">
+                          <span className={`text-xs font-semibold flex items-center gap-1 ${lock.status === "LOCKED" ? "text-orange-600" : "text-gray-400"}`}>
+                            <Clock className="w-3 h-3" /> {lock.status === "LOCKED" ? lock.expiresIn : lock.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
 
@@ -168,8 +232,8 @@ export default function ShopkeeperDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { href: "/shopkeeper/products", icon: Package, title: "Add Products", desc: "List new products and set offer prices", color: "bg-blue-50 text-blue-600" },
-              { href: "/shopkeeper/reels", icon: Video, title: "Upload Reels", desc: "Create short videos for your products", color: "bg-purple-50 text-purple-600" },
-              { href: "/shopkeeper/analytics", icon: TrendingUp, title: "View Analytics", desc: "See views, clicks, and conversion data", color: "bg-green-50 text-green-600" },
+              { href: "/shopkeeper/redeem", icon: QrCode, title: "Redeem Coupon", desc: "Scan or enter customer coupons", color: "bg-green-50 text-green-600" },
+              { href: "/shopkeeper/analytics", icon: BarChart3, title: "View Analytics", desc: "See views, clicks, and conversion data", color: "bg-purple-50 text-purple-600" },
             ].map(({ href, icon: Icon, title, desc, color }) => (
               <Link key={href} href={href} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all hover:-translate-y-0.5 group">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
@@ -179,26 +243,6 @@ export default function ShopkeeperDashboard() {
                 <p className="text-xs text-gray-500">{desc}</p>
               </Link>
             ))}
-          </div>
-          {/* Danger Zone */}
-          <div className="mt-8 bg-red-50 rounded-2xl border border-red-100 p-6 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-red-900 text-lg mb-1">Danger Zone</h3>
-                <p className="text-sm text-red-700 mb-4 max-w-xl">
-                  Once you delete your shop, there is no going back. All your products, locked offers, and analytics will be permanently removed. Please be certain.
-                </p>
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-5 rounded-xl text-sm flex items-center gap-2 transition-colors shadow-sm shadow-red-200"
-                >
-                  <Trash2 className="w-4 h-4" /> Delete My Shop
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </main>

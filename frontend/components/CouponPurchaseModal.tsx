@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   X, Ticket, IndianRupee, Zap, ShieldCheck,
-  ArrowRight, CheckCircle2, Sparkles
+  ArrowRight, CheckCircle2, Sparkles, Gift, Loader2
 } from "lucide-react";
 
 interface Props {
@@ -16,7 +16,7 @@ interface Props {
   shopName: string;
   productImage?: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 interface CouponTier {
@@ -47,25 +47,86 @@ export default function CouponPurchaseModal({
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"info" | "success">("info");
+  
+  // Referral credits state
+  const [referralBalance, setReferralBalance] = useState(0);
+  const [applyCredits, setApplyCredits] = useState(false);
 
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     document.body.appendChild(script);
+
+    // Fetch coupon calculator tier
     fetch(`/api/coupons/calculate?price=${productPrice}`)
       .then((r) => r.json())
-      .then((d) => { setTier(d); setLoading(false); });
-    return () => { document.body.removeChild(script); };
-  }, [productPrice]);
+      .then((d) => { 
+        setTier(d); 
+        setLoading(false); 
+      });
+
+    // Fetch customer profile to get referral credits balance
+    if (isSignedIn) {
+      fetch("/api/customer/profile")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.profile) {
+            setReferralBalance(d.profile.referralBalance || 0);
+            if (d.profile.referralBalance > 0) {
+              setApplyCredits(true); // auto-apply if balance exists!
+            }
+          }
+        })
+        .catch(console.error);
+    }
+
+    return () => { 
+      try {
+        document.body.removeChild(script); 
+      } catch (e) {}
+    };
+  }, [productPrice, isSignedIn]);
 
   const handlePurchase = async () => {
     if (!isSignedIn) { router.push("/sign-in"); return; }
     setPurchasing(true);
 
+    const couponCost = tier?.couponCost || 0;
+    const creditToUse = applyCredits ? Math.min(referralBalance, couponCost) : 0;
+    const remainingCost = couponCost - creditToUse;
+
+    // 1. FREE PURCHASE FLOW (Covered fully by credits)
+    if (remainingCost <= 0) {
+      try {
+        const res = await fetch("/api/coupons/claim-free", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setStep("success");
+          if (onSuccess) onSuccess();
+        } else {
+          alert(data.error || "Failed to redeem coupon using credits.");
+        }
+      } catch (err) {
+        alert("Network error.");
+      } finally {
+        setPurchasing(false);
+      }
+      return;
+    }
+
+    // 2. PAID / PARTIAL CREDIT FLOW (Via Razorpay)
     try {
       const res = await fetch("/api/coupons/purchase", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-use-referral": applyCredits ? "true" : "false" 
+        },
         body: JSON.stringify({ productId }),
       });
 
@@ -94,12 +155,13 @@ export default function CouponPurchaseModal({
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature,
               productId,
+              useReferral: applyCredits
             }),
           });
           const data = await verifyRes.json();
           if (data.success) {
             setStep("success");
-            onSuccess();
+            if (onSuccess) onSuccess();
           }
           setPurchasing(false);
         },
@@ -114,6 +176,10 @@ export default function CouponPurchaseModal({
       setPurchasing(false);
     }
   };
+
+  const couponCost = tier?.couponCost || 0;
+  const appliedCredit = applyCredits ? Math.min(referralBalance, couponCost) : 0;
+  const finalPayAmount = couponCost - appliedCredit;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 bg-black/50 backdrop-blur-sm">
@@ -134,17 +200,17 @@ export default function CouponPurchaseModal({
         {step === "success" ? (
           <div className="p-6 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <CheckCircle2 className="w-8 h-8 text-green-600 animate-bounce" />
             </div>
             <h3 className="text-xl font-extrabold text-gray-900 mb-2">Coupon Purchased! 🎉</h3>
             <p className="text-gray-500 text-sm mb-6">
               Your coupon is ready. Show it at <strong>{shopName}</strong> to save ₹{tier?.discountAmount}.
             </p>
             <div className="flex gap-3">
-              <button onClick={onClose} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl text-sm">Close</button>
+              <button onClick={onClose} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl text-sm hover:bg-gray-200 transition-colors">Close</button>
               <button
                 onClick={() => { onClose(); router.push("/profile/coupons"); }}
-                className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-1.5"
+                className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
               >
                 View Coupon <ArrowRight className="w-4 h-4" />
               </button>
@@ -159,7 +225,9 @@ export default function CouponPurchaseModal({
                   <Image src={productImage} alt={productName} fill className="object-cover" />
                 </div>
               ) : (
-                <div className="w-16 h-16 bg-gray-200 rounded-xl flex-shrink-0" />
+                <div className="w-16 h-16 bg-gray-200 rounded-xl flex-shrink-0 flex items-center justify-center">
+                  <Ticket className="w-6 h-6 text-gray-300" />
+                </div>
               )}
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-gray-900 text-sm line-clamp-1">{productName}</p>
@@ -169,8 +237,9 @@ export default function CouponPurchaseModal({
             </div>
 
             {loading ? (
-              <div className="h-24 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin" />
+              <div className="h-32 flex flex-col items-center justify-center gap-2">
+                <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
+                <p className="text-xs text-gray-400 font-medium">Calculating savings tier...</p>
               </div>
             ) : tier && (
               <>
@@ -186,12 +255,15 @@ export default function CouponPurchaseModal({
                       <p className="text-xs text-gray-400 mb-1">You Pay</p>
                       <div className="flex items-center gap-1">
                         <IndianRupee className="w-5 h-5 text-orange-600" />
-                        <span className="text-3xl font-black text-orange-600">{tier.couponCost}</span>
+                        <span className="text-3xl font-black text-orange-600">{finalPayAmount}</span>
                       </div>
+                      {appliedCredit > 0 && (
+                        <p className="text-[10px] text-green-600 font-semibold mt-0.5">(₹{appliedCredit} credit applied)</p>
+                      )}
                     </div>
 
                     <div className="flex flex-col items-center">
-                      <Zap className="w-5 h-5 text-purple-400 mb-1" />
+                      <Zap className="w-5 h-5 text-purple-400 mb-1 animate-pulse" />
                       <span className="text-xs text-gray-400">and save</span>
                     </div>
 
@@ -204,6 +276,28 @@ export default function CouponPurchaseModal({
                     </div>
                   </div>
                 </div>
+
+                {/* Referral Credits Section */}
+                {referralBalance > 0 && (
+                  <div className="bg-purple-50/50 border border-purple-100 rounded-2xl p-3 mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Gift className="w-4 h-4 text-purple-600 animate-bounce" />
+                      <div>
+                        <p className="text-xs font-bold text-purple-950">Referral Credits</p>
+                        <p className="text-[10px] text-purple-600">Available balance: ₹{referralBalance}</p>
+                      </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={applyCredits} 
+                        onChange={(e) => setApplyCredits(e.target.checked)} 
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                  </div>
+                )}
 
                 {/* Benefits */}
                 <div className="space-y-2 mb-5">
@@ -223,7 +317,11 @@ export default function CouponPurchaseModal({
                 {/* Trust */}
                 <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
                   <ShieldCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
-                  <span>Secure payment via Razorpay · UPI, Cards, Net Banking accepted</span>
+                  <span>
+                    {finalPayAmount === 0 
+                      ? "Paid entirely with credits · No payment gateway required" 
+                      : "Secure payment via Razorpay · UPI, Cards, Net Banking accepted"}
+                  </span>
                 </div>
 
                 <button
@@ -236,7 +334,9 @@ export default function CouponPurchaseModal({
                   ) : (
                     <>
                       <Ticket className="w-5 h-5" />
-                      Get Coupon — Pay ₹{tier.couponCost} → Save ₹{tier.discountAmount}
+                      {finalPayAmount === 0 
+                        ? `Claim Free Coupon (Save ₹${tier.discountAmount})`
+                        : `Get Coupon — Pay ₹${finalPayAmount} → Save ₹${tier.discountAmount}`}
                     </>
                   )}
                 </button>

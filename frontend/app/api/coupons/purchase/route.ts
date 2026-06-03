@@ -51,22 +51,41 @@ export async function POST(req: NextRequest) {
     }
 
     const tier = calculateCoupon(product.price);
+    
+    // Check referral balance
+    const useReferral = req.headers.get("x-use-referral") === "true" || false; // we can pass this via header or body
+    const creditToUse = useReferral ? Math.min(customer.referralBalance, tier.cost) : 0;
+    const remainingAmount = tier.cost - creditToUse;
 
-    // Create Razorpay order
+    if (remainingAmount <= 0) {
+      return NextResponse.json({
+        bypassRazorpay: true,
+        amount: 0,
+        discountAmount: tier.discount,
+        appliedCredit: creditToUse,
+        productName: product.title,
+        shopName: product.shop.shop_name,
+      });
+    }
+
+    // Create Razorpay order for remaining amount
     const razorpayOrder = await createRazorpayOrder(
-      tier.cost,
+      remainingAmount,
       `coupon-${productId}-${Date.now()}`,
       {
         productId,
         customerId: customer.id,
         type: "COUPON",
+        useReferral: useReferral ? "true" : "false",
+        creditToUse: creditToUse.toString(),
       }
     );
 
     return NextResponse.json({
       orderId: razorpayOrder.id,
-      amount: tier.cost,
+      amount: remainingAmount,
       discountAmount: tier.discount,
+      appliedCredit: creditToUse,
       label: tier.label,
       currency: "INR",
       keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,

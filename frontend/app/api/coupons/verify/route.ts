@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       razorpayPaymentId,
       razorpaySignature,
       productId,
+      useReferral,
     } = await req.json();
 
     // Verify signature
@@ -51,20 +52,35 @@ export async function POST(req: NextRequest) {
     const couponCode = generateCouponCode();
     const expiresAt = getCouponExpiry();
 
+    const creditToUse = useReferral ? Math.min(customer.referralBalance, tier.cost) : 0;
+    const remainingCost = tier.cost - creditToUse;
+
+    // Deduct credits if applied
+    if (creditToUse > 0) {
+      await prisma.customerProfile.update({
+        where: { id: customer.id },
+        data: {
+          referralBalance: {
+            decrement: creditToUse
+          }
+        }
+      });
+    }
+
     // Create payment record
     const payment = await prisma.payment.create({
       data: {
         type: "COUPON",
-        amount: tier.cost,
+        amount: remainingCost,
         status: "SUCCESS",
         razorpayOrderId,
         razorpayPaymentId,
         razorpaySignature,
-        description: `Coupon for ${product.title}`,
+        description: `Coupon for ${product.title} (Applied ₹${creditToUse} credit)`,
       },
     });
 
-    // Create coupon
+    // Create coupon (One-time use)
     const coupon = await prisma.coupon.create({
       data: {
         code: couponCode,
@@ -80,6 +96,7 @@ export async function POST(req: NextRequest) {
         expiresAt,
         productId,
         customerId: customer.id,
+        shopId: product.shopId, // link directly to shopId!
         paymentId: payment.id,
         razorpayOrderId,
       },

@@ -29,6 +29,14 @@ model CustomerProfile {
   priceAlerts  PriceAlert[]
   recentlyViewed RecentlyViewed[]
   lockedOffers LockedOffer[]
+  reviews      Review[]
+
+  // Referral System
+  referralCode    String?         @unique
+  referralBalance Float           @default(0)
+  referredById    String?
+  referredBy      CustomerProfile? @relation("Referrals", fields: [referredById], references: [id])
+  referrals       CustomerProfile[] @relation("Referrals")
 }
 
 // ─── SHOPKEEPER PROFILE ────────────────────────────────────
@@ -71,6 +79,8 @@ model Shop {
   products        Product[]
   reels           Reel[]
   subscription    Subscription?
+  coupons         Coupon[]
+  reviews         Review[]
   createdAt       DateTime @default(now())
 }
 
@@ -130,6 +140,8 @@ model Coupon {
   product         Product  @relation(fields: [productId], references: [id])
   customerId      String
   customer        CustomerProfile @relation(fields: [customerId], references: [id])
+  shopId          String?
+  shop            Shop?    @relation(fields: [shopId], references: [id])
   paymentId       String?          // Razorpay paymentId
   razorpayOrderId String?
   createdAt       DateTime @default(now())
@@ -253,4 +265,16 @@ model Order {
   productId String
   userId    String
   createdAt DateTime @default(now())
+}
+
+// ─── REVIEWS ──────────────────────────────────────────────
+model Review {
+  id          String   @id @default(cuid())
+  rating      Float    // e.g. 4.8
+  comment     String?
+  customerId  String
+  customer    CustomerProfile @relation(fields: [customerId], references: [id])
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  createdAt   DateTime @default(now())
 }
