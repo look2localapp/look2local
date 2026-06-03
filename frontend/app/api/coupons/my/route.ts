@@ -21,6 +21,7 @@ export async function GET() {
       where: { customerId: customer.id },
       include: {
         product: { include: { shop: true } },
+        review: true,
       },
       orderBy: { createdAt: "desc" },
     });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Star, ThumbsUp, ShieldCheck } from "lucide-react";
 
 interface Review {
@@ -12,11 +12,27 @@ interface Review {
   text: string;
   likes: number;
   verified: boolean;
+  productTitle?: string | null;
+}
+
+interface DBReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  verifiedPurchase: boolean;
+  customer: {
+    name: string;
+    profilePhoto: string | null;
+  };
+  product?: {
+    title: string;
+  } | null;
 }
 
 const SAMPLE_REVIEWS: Review[] = [
-  { id: "r1", author: "Vijay K.", avatar: "V", rating: 5, date: "2 days ago", text: "Amazing shop! Got the PS5 at a great price. The staff was very helpful and the offer lock system worked perfectly. Saved ₹3,000 compared to online prices!", likes: 12, verified: true },
-  { id: "r2", author: "Priya M.", avatar: "P", rating: 4, date: "1 week ago", text: "Good selection of electronics. The bank offer for HDFC card was a great deal. Slight wait time but totally worth it.", likes: 8, verified: true },
+  { id: "r1", author: "Vijay K.", avatar: "V", rating: 5, date: "2 days ago", text: "Amazing shop! Got the PS5 at a great price. The staff was very helpful and the offer lock system worked perfectly. Saved ₹3,000 compared to online prices!", likes: 12, verified: true, productTitle: "Sony PlayStation 5 Disc Edition" },
+  { id: "r2", author: "Priya M.", avatar: "P", rating: 4, date: "1 week ago", text: "Good selection of electronics. The bank offer for HDFC card was a great deal. Slight wait time but totally worth it.", likes: 8, verified: true, productTitle: "Apple AirPods Pro (2nd Gen)" },
   { id: "r3", author: "Rahul S.", avatar: "R", rating: 5, date: "2 weeks ago", text: "Best electronics shop in Hyderabad! Genuine products, excellent service. Used the L2L offer lock and it was honoured without any issues.", likes: 23, verified: false },
   { id: "r4", author: "Deepa A.", avatar: "D", rating: 3, date: "3 weeks ago", text: "Decent shop. Products are genuine but prices could be more competitive. The staff is knowledgeable.", likes: 4, verified: true },
 ];
@@ -41,9 +57,10 @@ interface ReviewsSectionProps {
   shopName: string;
   avgRating?: number;
   totalReviews?: number;
+  reviewsList?: DBReview[];
 }
 
-export default function ReviewsSection({ shopName, avgRating = 4.8, totalReviews = SAMPLE_REVIEWS.length }: ReviewsSectionProps) {
+export default function ReviewsSection({ shopName, reviewsList }: ReviewsSectionProps) {
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
   const [newRating, setNewRating] = useState(0);
@@ -51,6 +68,22 @@ export default function ReviewsSection({ shopName, avgRating = 4.8, totalReviews
   const [reviewText, setReviewText] = useState("");
   const [reviews, setReviews] = useState<Review[]>(SAMPLE_REVIEWS);
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    const dbReviews = (reviewsList || []).map(r => ({
+      id: r.id,
+      author: r.customer.name,
+      avatar: r.customer.name.charAt(0).toUpperCase(),
+      rating: r.rating,
+      date: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+      text: r.comment || "No comment left.",
+      likes: 0,
+      verified: r.verifiedPurchase,
+      productTitle: r.product?.title || null
+    }));
+    
+    setReviews([...dbReviews, ...SAMPLE_REVIEWS]);
+  }, [reviewsList]);
 
   const toggleLike = (id: string) => {
     setLiked(prev => {
@@ -73,15 +106,25 @@ export default function ReviewsSection({ shopName, avgRating = 4.8, totalReviews
     setReviewText("");
   };
 
-  const dist: Record<number, number> = { 5: 2, 4: 1, 3: 1, 2: 0, 1: 0 };
+  const displayTotalReviews = reviews.length;
+  const displayAvgRating = parseFloat((reviews.reduce((sum, r) => sum + r.rating, 0) / (reviews.length || 1)).toFixed(1));
+
+  const dist: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  reviews.forEach(r => {
+    const floorRating = Math.floor(r.rating);
+    if (dist[floorRating] !== undefined) {
+      dist[floorRating]++;
+    } else if (r.rating > 4 && r.rating < 5) {
+      dist[4]++;
+    }
+  });
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-      {/* Header */}
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mt-6">
       <div className="flex items-center justify-between mb-5">
         <h2 className="font-extrabold text-gray-900 text-lg flex items-center gap-2">
           ⭐ Customer Reviews
-          <span className="text-sm font-semibold text-gray-400">({reviews.length})</span>
+          <span className="text-sm font-semibold text-gray-400">({displayTotalReviews})</span>
         </h2>
         {!showForm && !submitted && (
           <button onClick={() => setShowForm(true)}
@@ -91,23 +134,21 @@ export default function ReviewsSection({ shopName, avgRating = 4.8, totalReviews
         )}
       </div>
 
-      {/* Rating summary */}
       <div className="flex gap-6 mb-6 p-4 bg-gray-50 rounded-2xl">
         <div className="text-center flex-shrink-0">
-          <p className="text-5xl font-extrabold text-gray-900">{avgRating.toFixed(1)}</p>
+          <p className="text-5xl font-extrabold text-gray-900">{displayAvgRating.toFixed(1)}</p>
           <div className="flex gap-0.5 justify-center my-1">
             {[1,2,3,4,5].map(i => (
-              <Star key={i} className={`w-4 h-4 ${i <= Math.round(avgRating) ? "text-amber-400 fill-current" : "text-gray-200 fill-current"}`} />
+              <Star key={i} className={`w-4 h-4 ${i <= Math.round(displayAvgRating) ? "text-amber-400 fill-current" : "text-gray-200 fill-current"}`} />
             ))}
           </div>
-          <p className="text-xs text-gray-400">{totalReviews} reviews</p>
+          <p className="text-xs text-gray-400">{displayTotalReviews} reviews</p>
         </div>
         <div className="flex-1 space-y-1.5">
-          {STARS.map(n => <StarRow key={n} n={n} count={dist[n] ?? 0} total={totalReviews} />)}
+          {STARS.map(n => <StarRow key={n} n={n} count={dist[n] ?? 0} total={displayTotalReviews} />)}
         </div>
       </div>
 
-      {/* Write Review Form */}
       {showForm && (
         <div className="mb-5 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
           <p className="font-bold text-gray-800 mb-3">Your Rating for {shopName}</p>
@@ -144,7 +185,6 @@ export default function ReviewsSection({ shopName, avgRating = 4.8, totalReviews
         </div>
       )}
 
-      {/* Review list */}
       <div className="space-y-4">
         {reviews.map(r => (
           <div key={r.id} className="border-b border-gray-50 pb-4 last:border-0 last:pb-0">
@@ -155,15 +195,28 @@ export default function ReviewsSection({ shopName, avgRating = 4.8, totalReviews
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <span className="font-bold text-sm text-gray-900">{r.author}</span>
-                  {r.verified && <span className="text-xs text-blue-600 flex items-center gap-0.5"><ShieldCheck className="w-3 h-3" /> Verified Visit</span>}
+                  {r.verified ? (
+                    <span className="text-[10px] font-bold text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-green-600" /> Verified Purchase
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+                      Regular Visit
+                    </span>
+                  )}
                   <span className="text-xs text-gray-400">{r.date}</span>
                 </div>
-                <div className="flex gap-0.5 mb-2">
+                <div className="flex gap-0.5 mb-1.5">
                   {[1,2,3,4,5].map(i => (
                     <Star key={i} className={`w-3.5 h-3.5 ${i <= r.rating ? "text-amber-400 fill-current" : "text-gray-200 fill-current"}`} />
                   ))}
                 </div>
-                <p className="text-sm text-gray-700 leading-relaxed">{r.text}</p>
+                {r.productTitle && (
+                  <p className="text-[11px] text-gray-500 font-semibold mb-1 flex items-center gap-1.5">
+                    🛍️ Bought: <span className="text-gray-700 font-extrabold">{r.productTitle}</span>
+                  </p>
+                )}
+                <p className="text-sm text-gray-700 leading-relaxed mt-1">{r.text}</p>
                 <button onClick={() => toggleLike(r.id)}
                   className={`mt-2 flex items-center gap-1.5 text-xs font-semibold transition-colors ${liked.has(r.id) ? "text-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
                   <ThumbsUp className={`w-3.5 h-3.5 ${liked.has(r.id) ? "fill-current" : ""}`} />

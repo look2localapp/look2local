@@ -69,7 +69,7 @@ export default function AdminDashboard() {
         {[
           { label: "Shop Approval Rate", value: `${Math.round((stats.verifiedShops / (stats.totalShops || 1)) * 100)}%`, icon: CheckCircle2, color: "text-green-400" },
           { label: "Coupon Activity", value: `${stats.activeCoupons} active`, icon: Ticket, color: "text-purple-400" },
-          { label: "Subscription Revenue", value: `₹${(stats.activeSubscriptions * 150).toLocaleString("en-IN")}/mo`, icon: CreditCard, color: "text-blue-400" },
+          { label: "Subscription Revenue", value: `₹${(stats.activeSubscriptions * 149).toLocaleString("en-IN")}/mo`, icon: CreditCard, color: "text-blue-400" },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-gray-900 rounded-2xl border border-gray-800 p-5 flex items-center gap-4">
             <Icon className={`w-8 h-8 ${color} flex-shrink-0`} />

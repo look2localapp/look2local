@@ -13,6 +13,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           orderBy: { createdAt: "desc" },
         },
         reels: { orderBy: { createdAt: "desc" }, take: 6 },
+        reviews: {
+          include: {
+            customer: true,
+            product: true,
+          },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 

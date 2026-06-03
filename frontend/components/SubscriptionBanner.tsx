@@ -45,7 +45,7 @@ export default function SubscriptionBanner({ daysRemaining, isExpired, plan }: P
         <p className={`text-xs mt-0.5 ${isExpired ? "text-red-700" : isUrgent ? "text-orange-700" : "text-blue-700"}`}>
           {isExpired
             ? "Your shop is now hidden from customers."
-            : "Continue uninterrupted for only ₹150/month"}
+            : "Continue uninterrupted for only ₹149/month"}
         </p>
       </div>
 

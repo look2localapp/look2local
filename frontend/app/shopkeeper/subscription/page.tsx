@@ -75,7 +75,7 @@ export default function SubscriptionPage() {
         amount: order.amount * 100,
         currency: "INR",
         name: "Look2Local",
-        description: "Standard Plan — ₹150/month",
+        description: "Standard Plan — ₹149/month",
         order_id: order.orderId,
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           const verifyRes = await fetch("/api/subscription/verify", {
@@ -178,7 +178,7 @@ export default function SubscriptionPage() {
               <AlertTriangle className="w-5 h-5" /> Your trial has expired
             </h3>
             <p className="text-red-700 text-sm">
-              Continue using Look2Local and keep your products visible to customers for only ₹150/month.
+              Continue using Look2Local and keep your products visible to customers for only ₹149/month.
             </p>
           </div>
         )}
@@ -192,7 +192,7 @@ export default function SubscriptionPage() {
               <div>
                 <span className="text-white/70 text-xs font-bold uppercase tracking-widest">Standard Plan</span>
                 <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-4xl font-black text-white">₹150</span>
+                  <span className="text-4xl font-black text-white">₹149</span>
                   <span className="text-white/70 text-sm">/month</span>
                 </div>
                 <p className="text-white/60 text-xs mt-1">Equivalent to ₹5/day</p>
@@ -267,7 +267,7 @@ export default function SubscriptionPage() {
             ) : (
               <>
                 <CreditCard className="w-5 h-5" />
-                {isExpired ? "Reactivate — ₹150/month" : "Activate Standard Plan — ₹150/month"}
+                {isExpired ? "Reactivate — ₹149/month" : "Activate Standard Plan — ₹149/month"}
               </>
             )}
           </button>
@@ -280,7 +280,7 @@ export default function SubscriptionPage() {
             className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 text-white font-bold text-base rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3"
           >
             <CreditCard className="w-5 h-5" />
-            Renew for Another Month — ₹150
+            Renew for Another Month — ₹149
           </button>
         )}
 

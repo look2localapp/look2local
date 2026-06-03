@@ -107,6 +107,7 @@ model Product {
   wishlist         Wishlist[]
   priceAlerts      PriceAlert[]
   recentlyViewed   RecentlyViewed[]
+  reviews          Review[]
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 }
@@ -144,6 +145,7 @@ model Coupon {
   shop            Shop?    @relation(fields: [shopId], references: [id])
   paymentId       String?          // Razorpay paymentId
   razorpayOrderId String?
+  review          Review?
   createdAt       DateTime @default(now())
 }
 
@@ -269,12 +271,17 @@ model Order {
 
 // ─── REVIEWS ──────────────────────────────────────────────
 model Review {
-  id          String   @id @default(cuid())
-  rating      Float    // e.g. 4.8
-  comment     String?
-  customerId  String
-  customer    CustomerProfile @relation(fields: [customerId], references: [id])
-  shopId      String
-  shop        Shop     @relation(fields: [shopId], references: [id])
-  createdAt   DateTime @default(now())
+  id               String   @id @default(cuid())
+  rating           Float    // e.g. 4.8
+  comment          String?
+  customerId       String
+  customer         CustomerProfile @relation(fields: [customerId], references: [id])
+  shopId           String
+  shop             Shop     @relation(fields: [shopId], references: [id])
+  productId        String?
+  product          Product? @relation(fields: [productId], references: [id])
+  couponId         String?  @unique
+  coupon           Coupon?  @relation(fields: [couponId], references: [id])
+  verifiedPurchase Boolean  @default(true)
+  createdAt        DateTime @default(now())
 }

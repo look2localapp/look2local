@@ -7,7 +7,7 @@ import Image from "next/image";
 import {
   Ticket, TrendingDown, IndianRupee, CheckCircle2,
   Clock, XCircle, QrCode, Copy, Check, ArrowLeft,
-  ShoppingBag, Sparkles, Calendar, BadgePercent
+  ShoppingBag, Sparkles, Calendar, BadgePercent, Star
 } from "lucide-react";
 import QRCode from "qrcode";
 
@@ -20,12 +20,15 @@ interface CouponData {
   status: string;
   expiresAt: string;
   createdAt: string;
+  redeemedAt?: string;
   product: {
+    id: string;
     title: string;
     images: string[];
     price: number;
-    shop: { shop_name: string };
+    shop: { id: string; shop_name: string };
   };
+  review?: { id: string; rating: number; comment?: string } | null;
 }
 
 interface Analytics {
@@ -45,6 +48,14 @@ export default function MyCouponsPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [qrImages, setQrImages] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<"all" | "active" | "redeemed">("all");
+
+  // Review states
+  const [selectedCouponForReview, setSelectedCouponForReview] = useState<CouponData | null>(null);
+  const [newRating, setNewRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [reviewComment, setReviewComment] = useState<string>("");
+  const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const fetchCoupons = useCallback(async () => {
     const res = await fetch("/api/coupons/my");
@@ -75,6 +86,52 @@ export default function MyCouponsPage() {
     await navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const handleSimulateTime = async (couponId: string) => {
+    try {
+      const res = await fetch("/api/coupons/simulate-time", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ couponId }),
+      });
+      if (res.ok) {
+        await fetchCoupons();
+      }
+    } catch (err) {
+      console.error("Simulation error:", err);
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!selectedCouponForReview || newRating < 1 || newRating > 5) return;
+    setReviewSubmitting(true);
+    setReviewError(null);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          couponId: selectedCouponForReview.id,
+          rating: newRating,
+          comment: reviewComment,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReviewError(data.error || "Failed to submit review");
+      } else {
+        await fetchCoupons();
+        setSelectedCouponForReview(null);
+        setNewRating(0);
+        setReviewComment("");
+      }
+    } catch (err) {
+      console.error(err);
+      setReviewError("An error occurred. Please try again.");
+    } finally {
+      setReviewSubmitting(false);
+    }
   };
 
   const filtered = coupons.filter((c) => {
@@ -279,12 +336,151 @@ export default function MyCouponsPage() {
                       </div>
                     </div>
                   </div>
+
+                  {coupon.status === "REDEEMED" && (
+                    <div className="px-5 pb-5 pt-4 border-t border-dashed border-gray-100 bg-gray-50/55 flex flex-wrap items-center justify-between gap-3">
+                      {coupon.review ? (
+                        <div className="flex items-center gap-3 w-full justify-between sm:justify-start">
+                          <span className="text-xs text-gray-500 font-bold">Your Review:</span>
+                          <div className="flex gap-0.5 text-amber-400">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-3.5 h-3.5 ${
+                                  star <= coupon.review!.rating ? "fill-current text-amber-500" : "text-gray-200 fill-current"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-[10px] font-bold text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+                            Verified Purchase
+                          </span>
+                        </div>
+                      ) : (() => {
+                        const redeemedTime = coupon.redeemedAt ? new Date(coupon.redeemedAt).getTime() : 0;
+                        const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+                        const diff = Date.now() - redeemedTime;
+                        const canReview = diff >= threeDaysMs;
+
+                        if (canReview) {
+                          return (
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs text-gray-500 font-bold">How was your purchase?</span>
+                              <button
+                                onClick={() => setSelectedCouponForReview(coupon)}
+                                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1 active:scale-[0.98]"
+                              >
+                                <Star className="w-3.5 h-3.5 fill-current" /> Rate experience
+                              </button>
+                            </div>
+                          );
+                        } else {
+                          const msLeft = threeDaysMs - diff;
+                          const hoursLeft = Math.ceil(msLeft / (1000 * 60 * 60));
+                          const daysLeft = Math.ceil(hoursLeft / 24);
+                          const timeStr = daysLeft > 1 ? `${daysLeft} days` : `${hoursLeft} hours`;
+
+                          return (
+                            <div className="flex flex-wrap items-center justify-between w-full gap-2">
+                              <span className="text-xs font-bold text-gray-500 bg-gray-100/80 px-2.5 py-1 rounded-xl flex items-center gap-1">
+                                ⏳ Review locks in {timeStr}
+                              </span>
+                              <button
+                                onClick={() => handleSimulateTime(coupon.id)}
+                                className="text-[10px] font-bold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded-lg border border-purple-200 transition-colors"
+                              >
+                                ⚡ Simulate 3 Days Passed
+                              </button>
+                            </div>
+                          );
+                        }
+                      })()}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Review Modal */}
+      {selectedCouponForReview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full p-6 relative animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-black text-gray-900 mb-1 flex items-center gap-2">
+              ⭐ Rate Your Experience
+            </h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Share your verified purchase experience at <span className="font-bold text-purple-700">{selectedCouponForReview.product.shop.shop_name}</span> for <span className="font-bold text-gray-800">{selectedCouponForReview.product.title}</span>.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Rating</label>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() => setNewRating(star)}
+                    className="transition-transform hover:scale-125"
+                  >
+                    <Star
+                      className={`w-8 h-8 transition-colors ${
+                        star <= (hoverRating || newRating) ? "text-amber-400 fill-current" : "text-gray-300"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Review Comment (Optional)</label>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                rows={3}
+                placeholder="How was the shop staff? Was the discount honored seamlessly?"
+                className="w-full px-4 py-3 bg-gray-55 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-400 focus:bg-white resize-none"
+              />
+            </div>
+
+            {reviewError && (
+              <p className="text-xs text-red-500 font-bold mb-4">{reviewError}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleReviewSubmit}
+                disabled={reviewSubmitting || newRating === 0}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 disabled:opacity-50 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-md flex items-center justify-center"
+              >
+                {reviewSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  "Submit Review"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCouponForReview(null);
+                  setNewRating(0);
+                  setReviewComment("");
+                  setReviewError(null);
+                }}
+                className="px-5 py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold rounded-xl text-sm transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

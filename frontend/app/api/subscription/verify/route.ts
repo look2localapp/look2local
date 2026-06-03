@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
-import { getSubscriptionEndDate } from "@/lib/subscription";
+import { getSubscriptionEndDate, PLAN_PRICES } from "@/lib/subscription";
 import prisma from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     const endDate = getSubscriptionEndDate();
-    const amount = plan === "STANDARD" ? 150 : 299;
+    const amount = PLAN_PRICES[plan as keyof typeof PLAN_PRICES] || PLAN_PRICES.STANDARD;
 
     // Create payment record
     const payment = await prisma.payment.create({

@@ -14,7 +14,7 @@ export interface SubscriptionStatus {
 }
 
 export const PLAN_PRICES = {
-  STANDARD: 150, // ₹150/month
+  STANDARD: 149, // ₹149/month
   PREMIUM: 299,  // ₹299/month (future)
 } as const;
 

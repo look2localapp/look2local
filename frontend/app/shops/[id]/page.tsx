@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 import { ArrowLeft, Star, MapPin, ShieldCheck, Clock, Lock, Truck, Heart, Share2, Phone, MessageCircle, ExternalLink, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
 import OfferLockModal from "@/components/OfferLockModal";
 import CardOffer from "@/components/CardOffer";
@@ -51,8 +51,51 @@ const SHOPS: Record<string, {
 
 export default function ShopDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const shop = SHOPS[id] ?? SHOPS["1"];
-  const [lockProduct, setLockProduct] = useState<typeof shop.products[0] | null>(null);
+  const [shopData, setShopData] = useState<any>(null);
+  const [dbReviews, setDbReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/shops/${id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.shop) {
+          setShopData(data.shop);
+          setDbReviews(data.shop.reviews || []);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load shop details:", err);
+        setLoading(false);
+      });
+  }, [id]);
+
+  const fallbackShop = SHOPS[id] ?? SHOPS["1"];
+  const shop = shopData ? {
+    ...fallbackShop,
+    name: shopData.shop_name,
+    ownerName: shopData.owner_name,
+    phone: shopData.phone,
+    whatsapp: shopData.whatsapp || fallbackShop.whatsapp,
+    address: shopData.address,
+    landmark: shopData.landmark || fallbackShop.landmark,
+    googleMapLink: shopData.google_map_link || fallbackShop.googleMapLink,
+    gstStatus: shopData.gst_status || (shopData.gst_verified ? "Active" : undefined),
+    aadhaarVerified: shopData.aadhaar_verified || false,
+    verified: shopData.verified || false,
+    deliveryAvailable: shopData.delivery_available || false,
+    products: shopData.products?.map((p: any) => ({
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      offerPrice: p.price - p.discount,
+      image: p.images?.[0] || "https://images.unsplash.com/photo-1550009158-9effb619a6c4?q=80&w=400&auto=format&fit=crop",
+      cardOffers: p.cardOffers || []
+    })) || fallbackShop.products
+  } : fallbackShop;
+
+  const [lockProduct, setLockProduct] = useState<any | null>(null);
   const [offersOpen, setOffersOpen] = useState(true);
 
   return (
@@ -210,7 +253,7 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
         <div>
           <h2 className="text-xl font-extrabold text-gray-900 mb-4">Products & Offers</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {shop.products.map((product) => {
+            {shop.products.map((product: any) => {
               const disc = Math.round(((product.price - product.offerPrice) / product.price) * 100);
               return (
                 <div key={product.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 flex flex-col">
@@ -246,7 +289,7 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
         </div>
 
         {/* Customer Reviews */}
-        <ReviewsSection shopName={shop.name} avgRating={shop.rating} totalReviews={shop.reviews} />
+        <ReviewsSection shopName={shop.name} reviewsList={dbReviews} />
 
       </div>
 
