@@ -4,27 +4,36 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Store, MapPin, FileText, Image as ImageIcon, CheckCircle2,
-  ArrowRight, ArrowLeft, Upload, Clock, ShieldCheck, Loader2,
+  ArrowRight, ArrowLeft, Clock, ShieldCheck, Loader2,
   XCircle, AlertCircle, Building2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/ImageUpload";
+import Image from "next/image";
 
 const STEPS = [
-  { num: 1, icon: Store, label: "Business Info" },
-  { num: 2, icon: MapPin, label: "Location" },
-  { num: 3, icon: Clock, label: "Hours" },
-  { num: 4, icon: ImageIcon, label: "Photos" },
-  { num: 5, icon: FileText, label: "Verify GST" },
+  { num: 1, icon: FileText, label: "Verify GST" },
+  { num: 2, icon: Store, label: "Business Info" },
+  { num: 3, icon: MapPin, label: "Location" },
+  { num: 4, icon: Clock, label: "Hours" },
+  { num: 5, icon: ImageIcon, label: "Photos" },
 ];
 
 type GSTState = "idle" | "checking" | "verified" | "failed" | "invalid_format";
 
 interface GSTResult {
   businessName: string;
+  tradeName: string;
+  legalName: string;
   gstStatus: string;
   stateCode: string;
   pan: string;
+  principalAddress: string;
+  natureOfBusiness: string;
+  aadhaarVerified: boolean;
+  hsnCategories: string[];
+  manualMode?: boolean;
+  message?: string;
 }
 
 export default function ShopkeeperRegisterPage() {
@@ -32,13 +41,32 @@ export default function ShopkeeperRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
-  // Step 5 — GST state
+  // Step 1: GST Verification State
   const [gstNumber, setGstNumber] = useState("");
   const [gstState, setGstState] = useState<GSTState>("idle");
   const [gstResult, setGstResult] = useState<GSTResult | null>(null);
-  const [password, setPassword] = useState("");
 
-  // Auto-verify when 15 chars entered
+  // Form State for Auto-fill
+  const [shopName, setShopName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [email, setEmail] = useState("");
+  const [category, setCategory] = useState("");
+  const [address, setAddress] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [city, setCity] = useState("");
+  const [pin, setPin] = useState("");
+  const [mapLink, setMapLink] = useState("");
+  const [password, setPassword] = useState("");
+  const [detectingGPS, setDetectingGPS] = useState(false);
+  const [shopImage, setShopImage] = useState("");
+  const [bannerImage, setBannerImage] = useState("");
+  const [openingTime, setOpeningTime] = useState("10:00");
+  const [closingTime, setClosingTime] = useState("21:00");
+  const [deliveryAvailable, setDeliveryAvailable] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
   const verifyGST = useCallback(async (gst: string) => {
     setGstState("checking");
     setGstResult(null);
@@ -51,12 +79,16 @@ export default function ShopkeeperRegisterPage() {
       const data = await res.json();
       if (data.success) {
         setGstState("verified");
-        setGstResult({
-          businessName: data.businessName,
-          gstStatus: data.gstStatus,
-          stateCode: data.stateCode,
-          pan: data.pan,
-        });
+        setGstResult(data);
+        
+        // --- AUTO FILL UX MAGIC ---
+        setShopName(data.tradeName || data.businessName || "");
+        setAddress(data.principalAddress || "");
+        
+        // Category Deduction from HSN
+        if (data.hsnCategories?.includes("8517") || data.hsnCategories?.includes("8418")) {
+          setCategory("Electronics & Gadgets");
+        }
       } else {
         setGstState("failed");
       }
@@ -74,12 +106,78 @@ export default function ShopkeeperRegisterPage() {
     }
   }, [gstNumber, verifyGST]);
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleGPSDetect = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    setDetectingGPS(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setMapLink(`https://maps.google.com/?q=${lat},${lng}`);
+        setDetectingGPS(false);
+      },
+      (error) => {
+        alert("Unable to retrieve your location. Please check your browser permissions.");
+        setDetectingGPS(false);
+      }
+    );
+  };
+
+  const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step < STEPS.length) setStep(step + 1);
-    else {
+    setSubmitError("");
+    if (step < STEPS.length) {
+      setStep(step + 1);
+    } else {
+      // Final step — save to database
       setSubmitting(true);
-      setTimeout(() => router.push("/shopkeeper/dashboard"), 1500);
+      try {
+        const res = await fetch("/api/shops/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shop_name: shopName,
+            owner_name: ownerName,
+            phone,
+            whatsapp,
+            email,
+            password,
+            category,
+            address,
+            landmark,
+            google_map_link: mapLink,
+            city,
+            pin,
+            opening_time: openingTime,
+            closing_time: closingTime,
+            delivery_available: deliveryAvailable,
+            shop_image: shopImage,
+            banner_image: bannerImage,
+            gst_number: gstNumber || null,
+            gst_verified: gstState === "verified",
+            business_name: gstResult?.businessName || null,
+            gst_status: gstResult?.gstStatus || null,
+            legal_name: gstResult?.legalName || null,
+            trade_name: gstResult?.tradeName || null,
+            business_type: gstResult?.natureOfBusiness || null,
+            aadhaar_verified: gstResult?.aadhaarVerified || false,
+            principal_address: gstResult?.principalAddress || null,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          router.push("/shopkeeper/dashboard");
+        } else {
+          setSubmitError(data.message || "Registration failed. Please try again.");
+          setSubmitting(false);
+        }
+      } catch {
+        setSubmitError("Network error. Please try again.");
+        setSubmitting(false);
+      }
     }
   };
 
@@ -94,8 +192,8 @@ export default function ShopkeeperRegisterPage() {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/30">
-            <Store className="w-7 h-7 text-white" />
+          <div className="mb-4">
+            <Image src="/logo.jpeg" alt="Look2Local" width={80} height={80} className="w-20 h-20 rounded-2xl mx-auto shadow-lg shadow-blue-500/30 object-contain bg-white" />
           </div>
           <h1 className="text-2xl font-extrabold text-white">Register Your Shop</h1>
           <p className="text-blue-300 text-sm mt-1">Join 2,000+ shops on Look2Local — It's Free</p>
@@ -130,162 +228,26 @@ export default function ShopkeeperRegisterPage() {
         <div className="bg-white rounded-3xl shadow-2xl p-8">
           <form onSubmit={handleNext}>
 
-            {/* ── Step 1: Business Info ── */}
+            {/* ── Step 1: Verify GST ── */}
             {step === 1 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Business Information</h2>
-                {[
-                  { label: "Shop Name *", id: "shopName", type: "text", placeholder: "e.g. Tech Hub Electronics" },
-                  { label: "Owner Name *", id: "ownerName", type: "text", placeholder: "Your full name" },
-                  { label: "Business Phone *", id: "phone", type: "tel", placeholder: "+91 98765 43210" },
-                  { label: "WhatsApp Number", id: "whatsapp", type: "tel", placeholder: "+91 98765 43210 (for customer queries)" },
-                  { label: "Business Email *", id: "email", type: "email", placeholder: "shop@example.com" },
-                ].map(({ label, id, type, placeholder }) => (
-                  <div key={id}>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
-                    <input required={!label.includes("WhatsApp")} type={type} id={id} placeholder={placeholder}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
-                  </div>
-                ))}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Category *</label>
-                  <select required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
-                    <option value="">Select category</option>
-                    {["Electronics & Gadgets", "Home & Furniture", "Clothing & Fashion", "Grocery & Supermarket",
-                      "Beauty & Cosmetics", "Bakery & Cafe", "Footwear", "Pharmacy", "Apple Products", "Other"]
-                      .map(c => <option key={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* ── Step 2: Location ── */}
-            {step === 2 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Shop Location</h2>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Address *</label>
-                  <textarea required rows={3} placeholder="Shop no., Building, Street, Area…"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all resize-none" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Landmark</label>
-                  <input type="text" placeholder="e.g. Near GVK Mall, opposite HDFC Bank"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">City *</label>
-                    <input required type="text" placeholder="Hyderabad"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">PIN Code *</label>
-                    <input required type="text" placeholder="500034"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-blue-600" /> Google Maps Link *
-                  </label>
-                  <input required type="url" placeholder="https://maps.google.com/..."
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
-                  <p className="text-xs text-gray-400 mt-1">Customers will navigate directly to your store using this link</p>
-                </div>
-                <button type="button" className="w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 border-dashed text-blue-700 font-semibold py-3 rounded-xl transition-colors text-sm">
-                  <MapPin className="w-4 h-4" /> Auto-detect my location via GPS
-                </button>
-              </div>
-            )}
-
-            {/* ── Step 3: Hours & Delivery ── */}
-            {step === 3 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Hours & Delivery</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Opening Time *</label>
-                    <input required type="time" defaultValue="10:00"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Closing Time *</label>
-                    <input required type="time" defaultValue="21:00"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Open Days</label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                      <label key={day} className="flex items-center gap-1.5 cursor-pointer bg-gray-50 border border-gray-200 hover:border-blue-300 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 transition-colors">
-                        <input type="checkbox" defaultChecked={day !== "Sun"} className="accent-blue-600" /> {day}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="border-t border-gray-100 pt-4 space-y-3">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" className="mt-0.5 w-4 h-4 accent-blue-600" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">Enable Home Delivery</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Customers can request delivery to their address</p>
-                    </div>
-                  </label>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Delivery Radius (km)</label>
-                    <input type="number" defaultValue="5" min="1" max="50"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Step 4: Photos ── */}
-            {step === 4 && (
               <div className="space-y-5">
-                <h2 className="text-lg font-bold text-gray-900 mb-1">Shop Photos</h2>
+                <h2 className="text-lg font-bold text-gray-900 mb-1">Step 1: GST Verification</h2>
                 <p className="text-sm text-gray-500 mb-4">
-                  Photos are uploaded directly to Cloudinary and stored permanently.
-                </p>
-                <ImageUpload
-                  type="shop_image"
-                  label="Shop Front Photo *"
-                  hint="Main image shown on your listing card · JPG, PNG · Max 5MB"
-                  aspectRatio="square"
-                  onUpload={(url) => console.log("Shop image:", url)}
-                />
-                <ImageUpload
-                  type="banner"
-                  label="Shop Banner Photo *"
-                  hint="Wide banner shown at top of your shop page · JPG, PNG · Max 5MB"
-                  aspectRatio="banner"
-                  onUpload={(url) => console.log("Banner:", url)}
-                />
-              </div>
-            )}
-
-            {/* ── Step 5: GST Verification ── */}
-            {step === 5 && (
-              <div className="space-y-5">
-                <h2 className="text-lg font-bold text-gray-900 mb-1">GST Verification</h2>
-                <p className="text-sm text-gray-500 mb-4">
-                  Enter your GST number — we'll verify it automatically with government records.
-                  <span className="text-blue-600 font-medium"> Verified shops get 3× more visibility.</span>
+                  Enter your GST number to instantly fetch and auto-fill your shop details.
+                  <span className="text-blue-600 font-medium"> Verified shops get a Trust Badge and 3× more visibility.</span>
                 </p>
 
                 {/* GST Input */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-blue-600" /> GST Number
+                    <ShieldCheck className="w-4 h-4 text-blue-600" /> GST Number (Optional)
                   </label>
                   <div className="relative">
                     <input
                       type="text"
                       value={gstNumber}
                       onChange={(e) => setGstNumber(e.target.value.toUpperCase().slice(0, 15))}
-                      placeholder="37ABCDE1234F1Z5"
+                      placeholder="e.g. 27AAAAA0000A1Z5"
                       maxLength={15}
                       className={`w-full px-4 py-3 bg-gray-50 border rounded-xl text-sm font-mono tracking-widest uppercase focus:outline-none focus:ring-2 transition-all pr-12 ${gstInputBorder}`}
                     />
@@ -307,40 +269,48 @@ export default function ShopkeeperRegisterPage() {
                     <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
                     <div>
                       <p className="text-sm font-semibold text-blue-800">Verifying with government records…</p>
-                      <p className="text-xs text-blue-600">Checking GST database via Sandbox API</p>
+                      <p className="text-xs text-blue-600">Checking GST database securely</p>
                     </div>
                   </div>
                 )}
 
                 {/* Verified state */}
                 {gstState === "verified" && gstResult && (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className={`${gstResult.manualMode ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"} border rounded-xl p-4`}>
                     <div className="flex items-center gap-2 mb-3">
-                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                      <p className="text-sm font-bold text-green-800">✅ GST Verified — Eligible for Verified Badge</p>
+                      <CheckCircle2 className={`w-5 h-5 flex-shrink-0 ${gstResult.manualMode ? "text-amber-500" : "text-green-600"}`} />
+                      <p className={`text-sm font-bold ${gstResult.manualMode ? "text-amber-800" : "text-green-800"}`}>
+                        {gstResult.manualMode
+                          ? "✅ GST format valid — fill details manually below"
+                          : "✅ GST Verified & Data Auto-filled"}
+                      </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white rounded-lg p-3 border border-green-100">
-                        <p className="text-xs text-gray-400 font-medium mb-0.5 flex items-center gap-1">
-                          <Building2 className="w-3 h-3" /> Business Name
-                        </p>
-                        <p className="text-sm font-bold text-gray-900">{gstResult.businessName}</p>
+                    {gstResult.manualMode ? (
+                      <p className="text-xs text-amber-700">Auto-fill is temporarily unavailable. Your GST number has been saved and you can continue registering by filling the details yourself.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white rounded-lg p-3 border border-green-100">
+                          <p className="text-xs text-gray-400 font-medium mb-0.5 flex items-center gap-1">
+                            <Building2 className="w-3 h-3" /> Trade Name
+                          </p>
+                          <p className="text-sm font-bold text-gray-900 line-clamp-1">{gstResult.tradeName}</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-green-100">
+                          <p className="text-xs text-gray-400 font-medium mb-0.5">Business Type</p>
+                          <p className="text-sm font-bold text-gray-900 truncate">{gstResult.natureOfBusiness}</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-green-100">
+                          <p className="text-xs text-gray-400 font-medium mb-0.5">GST Status</p>
+                          <p className={`text-sm font-bold ${gstResult.gstStatus === "Active" ? "text-green-600" : "text-orange-500"}`}>
+                            {gstResult.gstStatus}
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-green-100">
+                          <p className="text-xs text-gray-400 font-medium mb-0.5">Aadhaar Auth</p>
+                          <p className="text-sm font-bold text-gray-900">{gstResult.aadhaarVerified ? "✅ Verified" : "Not Verified"}</p>
+                        </div>
                       </div>
-                      <div className="bg-white rounded-lg p-3 border border-green-100">
-                        <p className="text-xs text-gray-400 font-medium mb-0.5">GST Status</p>
-                        <p className={`text-sm font-bold ${gstResult.gstStatus === "Active" ? "text-green-600" : "text-orange-500"}`}>
-                          {gstResult.gstStatus}
-                        </p>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 border border-green-100">
-                        <p className="text-xs text-gray-400 font-medium mb-0.5">State Code</p>
-                        <p className="text-sm font-bold text-gray-900">{gstResult.stateCode}</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 border border-green-100">
-                        <p className="text-xs text-gray-400 font-medium mb-0.5">PAN</p>
-                        <p className="text-sm font-bold font-mono text-gray-900">{gstResult.pan}</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
@@ -350,24 +320,14 @@ export default function ShopkeeperRegisterPage() {
                     <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-bold text-red-800">GST Number Not Found</p>
-                      <p className="text-xs text-red-600 mt-0.5">This GST is not in government records. Double-check and try again.</p>
+                      <p className="text-xs text-red-600 mt-0.5">This GST is not in government records. You can skip this step or try again.</p>
                     </div>
                   </div>
                 )}
 
-                {/* Skip GST note */}
-                {gstState === "idle" && (
-                  <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 px-4 py-3 rounded-xl">
-                    <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-700">
-                      GST is optional but verified shops appear higher in search results and get the <strong>Verified</strong> badge.
-                    </p>
-                  </div>
-                )}
-
-                {/* Password */}
-                <div className="border-t border-gray-100 pt-5">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Create Password *</label>
+                {/* Password Setup */}
+                <div className="border-t border-gray-100 pt-5 mt-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Create Look2Local Password *</label>
                   <input
                     required
                     type="password"
@@ -377,15 +337,147 @@ export default function ShopkeeperRegisterPage() {
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
                   />
                 </div>
+              </div>
+            )}
 
-                {/* Trust note */}
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            {/* ── Step 2: Business Info ── */}
+            {step === 2 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">Business Information</h2>
+                  {gstState === "verified" && (
+                    <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-200">
+                      Auto-filled via GST
+                    </span>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Shop Name (Trade Name) *</label>
+                  <input required type="text" value={shopName} onChange={e => setShopName(e.target.value)} placeholder="e.g. Tech Hub Electronics"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Owner Name *</label>
+                  <input required type="text" value={ownerName} onChange={e => setOwnerName(e.target.value)} placeholder="Your full name"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Phone *</label>
+                  <input required type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91 98765 43210"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">WhatsApp Number</label>
+                  <input type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="+91 98765 43210"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Email *</label>
+                  <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="shop@example.com"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
+                    Business Category *
+                    {gstState === "verified" && category && (
+                      <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">Suggested by GST</span>
+                    )}
+                  </label>
+                  <select required value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
+                    <option value="">Select category</option>
+                    {["Electronics & Gadgets", "Home & Furniture", "Clothing & Fashion", "Grocery & Supermarket",
+                      "Beauty & Cosmetics", "Bakery & Cafe", "Footwear", "Pharmacy", "Apple Products", "Other"]
+                      .map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* ── Step 3: Location ── */}
+            {step === 3 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">Shop Location</h2>
+                  {gstState === "verified" && (
+                    <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-200">
+                      Auto-filled via GST
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Address (Principal Place of Business) *</label>
+                  <textarea required rows={3} value={address} onChange={e => setAddress(e.target.value)} placeholder="Shop no., Building, Street, Area…"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all resize-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-blue-600" /> Google Maps Link *
+                  </label>
+                  <input required type="url" value={mapLink} onChange={e => setMapLink(e.target.value)} placeholder="https://maps.google.com/..."
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  <p className="text-xs text-gray-400 mt-1">Customers will navigate directly to your store using this link</p>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={handleGPSDetect}
+                  disabled={detectingGPS}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 border-dashed text-blue-700 font-semibold py-3 rounded-xl transition-colors text-sm disabled:opacity-50"
+                >
+                  {detectingGPS ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Detecting Location…</>
+                  ) : (
+                    <><MapPin className="w-4 h-4" /> Auto-detect my location via GPS</>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* ── Step 4: Hours & Delivery ── */}
+            {step === 4 && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Hours & Delivery</h2>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-bold text-blue-800">100% Free to Join</p>
-                    <p className="text-xs text-blue-600 mt-0.5">No commission. No subscription. Start selling for free.</p>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Opening Time *</label>
+                    <input required type="time" value={openingTime} onChange={e => setOpeningTime(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Closing Time *</label>
+                    <input required type="time" value={closingTime} onChange={e => setClosingTime(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
                   </div>
                 </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <input type="checkbox" id="delivery" checked={deliveryAvailable} onChange={e => setDeliveryAvailable(e.target.checked)}
+                    className="w-4 h-4 accent-blue-600 rounded" />
+                  <label htmlFor="delivery" className="text-sm font-medium text-gray-700">Offer home delivery</label>
+                </div>
+              </div>
+            )}
+
+            {/* ── Step 5: Photos ── */}
+            {step === 5 && (
+              <div className="space-y-5">
+                <h2 className="text-lg font-bold text-gray-900 mb-1">Shop Photos</h2>
+                <p className="text-sm text-gray-500 mb-4">
+                  Photos are uploaded directly to Cloudinary and stored permanently.
+                </p>
+                <ImageUpload
+                  type="shop_image"
+                  label="Shop Front Photo *"
+                  hint="Main image shown on your listing card"
+                  aspectRatio="square"
+                  onUpload={(url) => setShopImage(url)}
+                />
+                <ImageUpload
+                  type="banner"
+                  label="Shop Banner Photo *"
+                  hint="Wide banner shown at top of your shop page"
+                  aspectRatio="banner"
+                  onUpload={(url) => setBannerImage(url)}
+                />
               </div>
             )}
 
@@ -415,6 +507,14 @@ export default function ShopkeeperRegisterPage() {
               </button>
             </div>
           </form>
+
+          {/* Submit error */}
+          {submitError && (
+            <div className="mt-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+              <p className="text-sm text-red-700 font-medium">{submitError}</p>
+            </div>
+          )}
         </div>
 
         <p className="text-center text-blue-300/50 text-xs mt-4">

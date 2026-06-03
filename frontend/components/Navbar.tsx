@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Store, Menu, X, Video, ShoppingBag, Search, User, ChevronDown } from "lucide-react";
+import { Store, Menu, X, Video, ShoppingBag, Search, User, Ticket, Heart } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -23,13 +23,10 @@ export default function Navbar() {
         <div className="flex items-center gap-3 h-14">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-8 h-8 rounded-lg overflow-hidden relative border border-gray-100 flex items-center justify-center bg-white">
-              <Image src="/logo.jpeg" alt="Look2Local" fill className="object-cover" />
+          <Link href="/" className="flex items-center flex-shrink-0">
+            <div className="w-36 h-10 relative flex items-center justify-start">
+              <Image src="/logo.jpeg" alt="Look2Local" fill className="object-contain object-left" />
             </div>
-            <span className="font-heading font-extrabold text-lg text-gray-900 hidden sm:block">
-              Look2<span className="text-orange-500">Local</span>
-            </span>
           </Link>
 
           {/* Search — full center bar like Flipkart */}
@@ -89,6 +86,16 @@ export default function Navbar() {
             </Show>
 
             <Show when="signed-in">
+              <Link href="/profile/coupons"
+                className="flex flex-col items-center px-3 py-1 text-gray-700 hover:text-purple-600 transition-colors group">
+                <Ticket className="w-4 h-4 mb-0.5 group-hover:text-purple-600" />
+                <span className="text-[11px] font-semibold">Coupons</span>
+              </Link>
+              <Link href="/profile/wishlist"
+                className="flex flex-col items-center px-3 py-1 text-gray-700 hover:text-pink-600 transition-colors group">
+                <Heart className="w-4 h-4 mb-0.5 group-hover:text-pink-600" />
+                <span className="text-[11px] font-semibold">Wishlist</span>
+              </Link>
               <NotificationBell />
               <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }} userProfileMode="modal" />
             </Show>
@@ -143,6 +150,8 @@ export default function Navbar() {
             {[
               { href: "/shops", label: "Nearby Shops", icon: ShoppingBag },
               { href: "/reels", label: "Product Reels", icon: Video },
+              { href: "/profile/coupons", label: "My Coupons", icon: Ticket },
+              { href: "/profile/wishlist", label: "My Wishlist", icon: Heart },
               { href: "/shopkeeper/login", label: "Shopkeeper Portal", icon: Store },
             ].map(({ href, label, icon: Icon }) => (
               <Link key={href} href={href} onClick={() => setMenuOpen(false)}

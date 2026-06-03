@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, use } from "react";
-import { ArrowLeft, Star, MapPin, ShieldCheck, Clock, Lock, Truck, Heart, Share2, Phone, MessageCircle, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Star, MapPin, ShieldCheck, Clock, Lock, Truck, Heart, Share2, Phone, MessageCircle, ExternalLink, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
 import OfferLockModal from "@/components/OfferLockModal";
 import CardOffer from "@/components/CardOffer";
 import dynamic from "next/dynamic";
@@ -18,6 +18,7 @@ const SHOPS: Record<string, {
   shopImage: string; bannerImage: string; category: string;
   openingHours: string; rating: number; reviews: number;
   verified: boolean; deliveryAvailable: boolean; isOpen: boolean;
+  gstStatus?: string; aadhaarVerified?: boolean;
   products: { id: string; title: string; price: number; offerPrice: number; image: string; }[];
   cardOffers: { bankName: string; cardType: string; offerText: string; minAmount?: number }[];
 }> = {
@@ -32,6 +33,7 @@ const SHOPS: Record<string, {
     bannerImage: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200&auto=format&fit=crop",
     category: "Electronics & Gadgets", openingHours: "10:00 AM – 9:00 PM",
     rating: 4.8, reviews: 342, verified: true, deliveryAvailable: true, isOpen: true,
+    gstStatus: "Active", aadhaarVerified: true,
     products: [
       { id: "101", title: "Sony PlayStation 5 Disc Edition", price: 49990, offerPrice: 44990, image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?q=80&w=400&auto=format&fit=crop" },
       { id: "102", title: "Apple AirPods Pro (2nd Gen)", price: 24900, offerPrice: 21500, image: "https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?q=80&w=400&auto=format&fit=crop" },
@@ -90,12 +92,30 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h1 className="text-2xl font-extrabold text-gray-900">{shop.name}</h1>
                 {shop.verified && (
-                  <span className="flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-lg">
-                    <ShieldCheck className="w-3.5 h-3.5" /> Verified
+                  <span className="flex items-center gap-1 text-xs font-bold text-yellow-700 bg-yellow-50 border border-yellow-200 px-2 py-0.5 rounded-lg">
+                    🏆 Verified Shop
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500 mb-2">{shop.category}</p>
+              <p className="text-sm text-gray-500 mb-3">{shop.category}</p>
+              
+              {/* Trust Badges Row */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="flex items-center gap-1 text-xs font-bold text-green-700 bg-green-50 border border-green-100 px-2 py-1 rounded-lg">
+                  <ShieldCheck className="w-3.5 h-3.5" /> GST Verified
+                </span>
+                {shop.gstStatus === "Active" && (
+                  <span className="flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-1 rounded-lg">
+                    <CheckCircle2 className="w-3 h-3" /> Active Business
+                  </span>
+                )}
+                {shop.aadhaarVerified && (
+                  <span className="flex items-center gap-1 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-lg">
+                    <CheckCircle2 className="w-3 h-3" /> Aadhaar Verified
+                  </span>
+                )}
+              </div>
+
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-0.5 rounded-lg text-sm font-bold">
                   <Star className="w-3.5 h-3.5 fill-current" /> {shop.rating}

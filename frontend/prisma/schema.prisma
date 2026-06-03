@@ -7,22 +7,33 @@ datasource db {
 }
 
 
-// ─── USERS ────────────────────────────────────────────────
-model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  role      String   @default("customer") // customer | shopkeeper | admin
-  address   String?
-  mapLink   String?
-  createdAt DateTime @default(now())
+// ─── CUSTOMER PROFILE ─────────────────────────────────────
+// Linked to Clerk userId — customers only (not shopkeepers)
+model CustomerProfile {
+  id           String   @id @default(cuid())
+  clerkId      String   @unique   // Clerk userId
+  name         String
+  email        String   @unique
+  phone        String?
+  profilePhoto String?  // Cloudinary URL
+  address      String?
+  city         String?
+  pincode      String?
+  latitude     Float?
+  longitude    Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coupons      Coupon[]
+  wishlist     Wishlist[]
+  priceAlerts  PriceAlert[]
+  recentlyViewed RecentlyViewed[]
   lockedOffers LockedOffer[]
 }
 
 // ─── SHOPKEEPER PROFILE ────────────────────────────────────
 model Shopkeeper {
-  id           String   @id @default(cuid())
+  id           String   @id   // Clerk userId used directly as PK
   email        String   @unique
   passwordHash String
   shop         Shop?
@@ -31,46 +42,127 @@ model Shopkeeper {
 
 // ─── SHOP ─────────────────────────────────────────────────
 model Shop {
-  id             String   @id @default(cuid())
-  shop_name      String
-  owner_name     String
-  phone          String
-  address        String
-  landmark       String?
+  id              String   @id @default(cuid())
+  shop_name       String
+  owner_name      String
+  phone           String
+  whatsapp        String?
+  address         String
+  landmark        String?
   google_map_link String
-  shop_image     String   // Cloudinary URL
-  banner_image   String   // Cloudinary URL
-  gst_number     String?
-  gst_verified   Boolean  @default(false)
-  business_name  String?  // fetched from GST API
-  gst_status     String?  // Active | Cancelled etc.
-  category       String
-  opening_hours  String   @default("10:00 AM - 9:00 PM")
-  verified       Boolean  @default(false)
+  shop_image      String   // Cloudinary URL
+  banner_image    String   // Cloudinary URL
+  gst_number      String?
+  gst_verified    Boolean  @default(false)
+  business_name   String?
+  gst_status      String?
+  legal_name      String?
+  trade_name      String?
+  business_type   String?
+  aadhaar_verified Boolean? @default(false)
+  principal_address String?
+  category        String
+  opening_hours   String   @default("10:00 AM - 9:00 PM")
+  verified        Boolean  @default(false)
+  featured        Boolean  @default(false)
   delivery_available Boolean @default(false)
-  shopkeeperId   String   @unique
-  shopkeeper     Shopkeeper @relation(fields: [shopkeeperId], references: [id])
-  products       Product[]
-  reels          Reel[]
-  createdAt      DateTime @default(now())
+  shopkeeperId    String   @unique
+  shopkeeper      Shopkeeper @relation(fields: [shopkeeperId], references: [id])
+  products        Product[]
+  reels           Reel[]
+  subscription    Subscription?
+  createdAt       DateTime @default(now())
 }
-
 
 // ─── PRODUCT ──────────────────────────────────────────────
 model Product {
-  id          String      @id @default(cuid())
-  title       String
-  description String
-  price       Float
-  discount    Float       @default(0)
-  images      String[]    // Cloudinary URLs
-  inStock     Boolean     @default(true)
-  stock       Int         @default(0)
-  shopId      String
-  shop        Shop        @relation(fields: [shopId], references: [id])
-  cardOffers  CardOffer[]
-  lockedOffers LockedOffer[]
-  createdAt   DateTime    @default(now())
+  id               String      @id @default(cuid())
+  title            String
+  description      String
+  price            Float
+  discount         Float       @default(0)
+  images           String[]    // Cloudinary URLs
+  inStock          Boolean     @default(true)
+  stock            Int         @default(0)
+  brand            String?
+  category         String?
+  barcode          String?     @unique
+  masterProductId  String?
+  masterProduct    MasterProduct? @relation(fields: [masterProductId], references: [id])
+  shopId           String
+  shop             Shop        @relation(fields: [shopId], references: [id])
+  cardOffers       CardOffer[]
+  lockedOffers     LockedOffer[]
+  coupons          Coupon[]
+  wishlist         Wishlist[]
+  priceAlerts      PriceAlert[]
+  recentlyViewed   RecentlyViewed[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+// ─── MASTER PRODUCT CATALOG ────────────────────────────────
+model MasterProduct {
+  id           String    @id @default(cuid())
+  name         String
+  brand        String
+  category     String    // Mobiles | Laptops | TVs | Cameras | SmartWatches | Trimmers | HomeAppliances | Gaming | Accessories
+  image        String?   // Default product image URL
+  description  String?
+  specifications Json?   // { storage: [...], colors: [...], ram: [...], etc. }
+  barcode      String?   @unique
+  createdAt    DateTime  @default(now())
+
+  products     Product[]
+}
+
+// ─── COUPON ───────────────────────────────────────────────
+model Coupon {
+  id              String   @id @default(cuid())
+  code            String   @unique  // e.g. L2L-AB123
+  qrData          String            // QR code data string
+  couponCost      Float             // Amount customer paid (e.g. ₹50)
+  discountAmount  Float             // Amount customer saves (e.g. ₹300)
+  status          String   @default("ACTIVE") // ACTIVE | REDEEMED | EXPIRED
+  expiresAt       DateTime
+  redeemedAt      DateTime?
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  customerId      String
+  customer        CustomerProfile @relation(fields: [customerId], references: [id])
+  paymentId       String?          // Razorpay paymentId
+  razorpayOrderId String?
+  createdAt       DateTime @default(now())
+}
+
+// ─── SUBSCRIPTION ──────────────────────────────────────────
+model Subscription {
+  id          String   @id @default(cuid())
+  plan        String   @default("FREE_TRIAL") // FREE_TRIAL | STANDARD | PREMIUM
+  status      String   @default("ACTIVE")     // ACTIVE | EXPIRED | CANCELLED
+  startDate   DateTime @default(now())
+  endDate     DateTime
+  shopId      String   @unique
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  payments    Payment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── PAYMENT ──────────────────────────────────────────────
+model Payment {
+  id               String   @id @default(cuid())
+  type             String   // COUPON | SUBSCRIPTION
+  amount           Float
+  currency         String   @default("INR")
+  status           String   @default("PENDING") // PENDING | SUCCESS | FAILED | REFUNDED
+  razorpayOrderId  String?  @unique
+  razorpayPaymentId String? @unique
+  razorpaySignature String?
+  description      String?
+  subscriptionId   String?
+  subscription     Subscription? @relation(fields: [subscriptionId], references: [id])
+  createdAt        DateTime @default(now())
 }
 
 // ─── CARD OFFER (BANK OFFERS) ──────────────────────────────
@@ -95,10 +187,48 @@ model LockedOffer {
   status            String   @default("LOCKED") // LOCKED | REDEEMED | EXPIRED
   expiresAt         DateTime
   lockedAt          DateTime @default(now())
-  userId            String?
-  user              User?    @relation(fields: [userId], references: [id])
+  customerId        String?
+  customer          CustomerProfile? @relation(fields: [customerId], references: [id])
   productId         String
   product           Product  @relation(fields: [productId], references: [id])
+}
+
+// ─── WISHLIST ────────────────────────────────────────────
+model Wishlist {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   CustomerProfile @relation(fields: [customerId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, productId])
+}
+
+// ─── PRICE ALERT ─────────────────────────────────────────
+model PriceAlert {
+  id           String   @id @default(cuid())
+  customerId   String
+  customer     CustomerProfile @relation(fields: [customerId], references: [id])
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  targetPrice  Float
+  triggered    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@unique([customerId, productId])
+}
+
+// ─── RECENTLY VIEWED ──────────────────────────────────────
+model RecentlyViewed {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   CustomerProfile @relation(fields: [customerId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  viewedAt   DateTime @default(now())
+
+  @@unique([customerId, productId])
 }
 
 // ─── REELS ────────────────────────────────────────────────
@@ -111,15 +241,15 @@ model Reel {
   likes      Int      @default(0)
   shopId     String
   shop       Shop     @relation(fields: [shopId], references: [id])
-  productId  String?  // Optional: tagged product
+  productId  String?
   createdAt  DateTime @default(now())
 }
 
 // ─── ORDERS ───────────────────────────────────────────────
 model Order {
   id        String   @id @default(cuid())
-  status    String   @default("PENDING") // PENDING | CONFIRMED | DELIVERED | CANCELLED
-  type      String   @default("STORE_VISIT") // STORE_VISIT | DELIVERY
+  status    String   @default("PENDING")
+  type      String   @default("STORE_VISIT")
   productId String
   userId    String
   createdAt DateTime @default(now())

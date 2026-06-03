@@ -16,21 +16,20 @@ export async function POST() {
     await prisma.product.deleteMany();
     await prisma.shop.deleteMany();
     await prisma.shopkeeper.deleteMany();
-    await prisma.user.deleteMany();
 
     // Create shopkeeper 1
     const sk1 = await prisma.shopkeeper.create({
-      data: { email: "techhub@look2local.in", passwordHash: "hashed_demo_password" },
+      data: { id: "seed_shopkeeper_1", email: "techhub@look2local.in", passwordHash: "hashed_demo_password" },
     });
 
     // Create shopkeeper 2
     const sk2 = await prisma.shopkeeper.create({
-      data: { email: "sneakerdrop@look2local.in", passwordHash: "hashed_demo_password" },
+      data: { id: "seed_shopkeeper_2", email: "sneakerdrop@look2local.in", passwordHash: "hashed_demo_password" },
     });
 
     // Create shopkeeper 3
     const sk3 = await prisma.shopkeeper.create({
-      data: { email: "iworld@look2local.in", passwordHash: "hashed_demo_password" },
+      data: { id: "seed_shopkeeper_3", email: "iworld@look2local.in", passwordHash: "hashed_demo_password" },
     });
 
     // Create Shop 1
@@ -190,13 +189,8 @@ export async function POST() {
       ],
     });
 
-    // Create demo users
-    await prisma.user.createMany({
-      data: [
-        { name: "Vijay Kumar", email: "vijay@demo.com", phone: "+91 98765 00001", role: "customer" },
-        { name: "Priya Sharma", email: "priya@demo.com", phone: "+91 98765 00002", role: "customer" },
-      ],
-    });
+    // (Users are now managed via Clerk auth — no seeding needed)
+
 
     // Create a demo locked offer
     await prisma.lockedOffer.create({

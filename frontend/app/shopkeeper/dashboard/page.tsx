@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   BarChart3, Package, Video, Settings, Store,
   TrendingUp, Eye, Lock, ShoppingBag, PlusCircle,
-  Bell, MapPin, ArrowUpRight, Truck, Clock
+  Bell, MapPin, ArrowUpRight, Truck, Clock,
+  AlertTriangle, Trash2, X
 } from "lucide-react";
 
 const STATS = [
@@ -31,6 +34,14 @@ const NAV = [
 ];
 
 export default function ShopkeeperDashboard() {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const router = useRouter();
+
+  const handleDeleteShop = () => {
+    // Simulate shop deletion and logout
+    router.push("/shopkeeper/login");
+  };
+
   return (
     <div className="flex min-h-[calc(100vh-64px)] bg-gray-50">
       {/* Sidebar */}
@@ -169,8 +180,63 @@ export default function ShopkeeperDashboard() {
               </Link>
             ))}
           </div>
+          {/* Danger Zone */}
+          <div className="mt-8 bg-red-50 rounded-2xl border border-red-100 p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-red-900 text-lg mb-1">Danger Zone</h3>
+                <p className="text-sm text-red-700 mb-4 max-w-xl">
+                  Once you delete your shop, there is no going back. All your products, locked offers, and analytics will be permanently removed. Please be certain.
+                </p>
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-5 rounded-xl text-sm flex items-center gap-2 transition-colors shadow-sm shadow-red-200"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete My Shop
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mb-5 border border-red-200 shadow-sm">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+            </div>
+            <h2 className="text-xl font-extrabold text-gray-900 mb-2">Delete Shop?</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              This action cannot be undone. All your data, products, and offers will be permanently erased.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteShop}
+                className="py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm transition-colors shadow-sm shadow-red-200"
+              >
+                Yes, Delete Shop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
