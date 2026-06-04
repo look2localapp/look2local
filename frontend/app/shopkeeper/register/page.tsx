@@ -20,7 +20,8 @@ const STEPS = [
   { num: 5, icon: ImageIcon, label: "Photos" },
 ];
 
-type GSTState = "idle" | "checking" | "verified" | "not_active" | "failed" | "invalid_format" | "api_unavailable";
+// success=true from API → always verified. Only error states are: invalid_format, failed, api_unavailable.
+type GSTState = "idle" | "checking" | "verified" | "failed" | "invalid_format" | "api_unavailable";
 
 interface GSTResult {
   gstNumber: string;
@@ -28,7 +29,8 @@ interface GSTResult {
   tradeName: string;
   legalName: string;
   taxType: string;        // taxPayerType e.g. "Regular"
-  businessType: string;   // natureOfBusiness e.g. "Retail Business"
+  nature: string;         // natureOfBusiness
+  businessType: string;   // natureOfBusiness (compat)
   gstStatus: string;
   state: string;
   district: string;
@@ -86,6 +88,7 @@ export default function ShopkeeperRegisterPage() {
       });
       const data = await res.json();
 
+      // ── Error handling ───────────────────────────────────────────────────
       if (!res.ok || !data.success) {
         if (data.invalidFormat) {
           setGstState("invalid_format");
@@ -97,30 +100,29 @@ export default function ShopkeeperRegisterPage() {
         return;
       }
 
-      // Success — new gst-insights-api shape
+      // ── SUCCESS: success=true from API always means GST is verified ──────
+      // This API does NOT return inactive/cancelled status.
       setGstResult(data as GSTResult);
+      setGstState("verified");
 
-      if (data.gstVerified) {
-        setGstState("verified");
-        // ── AUTO-FILL from API response ──────────────────────────────────
-        setShopName(data.tradeName || data.legalName || data.businessName || "");
-        setAddress(data.principalAddress || "");
-        setState(data.state || "");
-        setDistrict(data.district || "");
-        setPin(data.pincode || "");
-        // Smart category deduction from businessType
-        const btype = (data.businessType || "").toLowerCase();
-        if (btype.includes("retail") && btype.includes("electron")) setCategory("Electronics & Gadgets");
-        else if (btype.includes("retail")) setCategory("Other");
-        else if (btype.includes("food") || btype.includes("bakery") || btype.includes("restaurant")) setCategory("Bakery & Cafe");
-        else if (btype.includes("cloth") || btype.includes("fashion") || btype.includes("garment")) setCategory("Clothing & Fashion");
-        else if (btype.includes("grocery") || btype.includes("kirana")) setCategory("Grocery & Supermarket");
-        else if (btype.includes("pharma") || btype.includes("medicine")) setCategory("Pharmacy");
-        else if (btype.includes("footwear") || btype.includes("shoe")) setCategory("Footwear");
-      } else {
-        // GST valid but NOT Active
-        setGstState("not_active");
-      }
+      // ── AUTO-FILL: Shop Name = legalName, State, District, Pincode ───────
+      setShopName(data.legalName || "");
+      setAddress(data.principalAddress || "");
+      setState(data.stateCode || "");
+      setDistrict(data.district || "");
+      setPin(data.pincode || "");
+
+      // Smart category from nature
+      const btype = (data.nature || "").toLowerCase();
+      if (btype.includes("retail") && btype.includes("electron")) setCategory("Electronics & Gadgets");
+      else if (btype.includes("motor") || btype.includes("vehicle") || btype.includes("auto")) setCategory("Other");
+      else if (btype.includes("food") || btype.includes("bakery") || btype.includes("restaurant") || btype.includes("cafe")) setCategory("Bakery & Cafe");
+      else if (btype.includes("cloth") || btype.includes("fashion") || btype.includes("garment") || btype.includes("textile")) setCategory("Clothing & Fashion");
+      else if (btype.includes("grocery") || btype.includes("kirana") || btype.includes("supermarket")) setCategory("Grocery & Supermarket");
+      else if (btype.includes("pharma") || btype.includes("medicine") || btype.includes("medical")) setCategory("Pharmacy");
+      else if (btype.includes("footwear") || btype.includes("shoe")) setCategory("Footwear");
+      else if (btype.includes("beauty") || btype.includes("cosmetic") || btype.includes("salon")) setCategory("Beauty & Cosmetics");
+
     } catch {
       setGstState("failed");
     }
@@ -135,13 +137,14 @@ export default function ShopkeeperRegisterPage() {
     }
   }, [gstNumber, verifyGST]);
 
-  // Block Continue if GST was entered but is not Active (unless explicitly skipped)
+  // GST is optional. Only block Continue if format is invalid or still checking.
   const canProceedFromStep1 = (): boolean => {
-    if (gstSkipped || gstNumber.length === 0) return true;
-    if (gstState === "verified") return true;
-    if (gstState === "api_unavailable") return true; // allow manual fallback
-    if (gstState === "checking") return false;
-    return false; // invalid_format | failed | not_active
+    if (gstNumber.length === 0) return true;           // no GST entered — optional
+    if (gstState === "verified") return true;           // verified ✅
+    if (gstState === "api_unavailable") return true;   // allow manual fallback
+    if (gstState === "idle") return true;               // still typing
+    if (gstState === "checking") return false;          // wait for API
+    return false;                                       // invalid_format | failed
   };
 
   const handleGPSDetect = () => {
@@ -196,14 +199,14 @@ export default function ShopkeeperRegisterPage() {
             banner_image: bannerImage,
             gst_number: gstNumber || null,
             gst_verified: gstState === "verified",
-            business_name: gstResult?.businessName || gstResult?.legalName || null,
-            gst_status: gstResult?.gstStatus || null,
+            business_name: gstResult?.legalName || null,
+            gst_status: "Active",
             legal_name: gstResult?.legalName || null,
             trade_name: gstResult?.tradeName || null,
             tax_type: gstResult?.taxType || null,
-            business_type: gstResult?.businessType || null,
+            business_type: gstResult?.nature || null,
             principal_address: gstResult?.principalAddress || null,
-            state: gstResult?.state || state || null,
+            state: gstResult?.stateCode || state || null,
             district: gstResult?.district || district || null,
             pincode: gstResult?.pincode || pin || null,
             last_filing_status: gstResult?.lastFilingStatus || null,
@@ -226,7 +229,6 @@ export default function ShopkeeperRegisterPage() {
 
   const gstInputBorder =
     gstState === "verified" ? "border-green-400 focus:ring-green-100" :
-    gstState === "not_active" ? "border-orange-400 focus:ring-orange-100" :
     gstState === "failed" || gstState === "invalid_format" ? "border-red-400 focus:ring-red-100" :
     "border-gray-200 focus:ring-blue-100";
 
@@ -293,7 +295,6 @@ export default function ShopkeeperRegisterPage() {
                       type="text"
                       value={gstNumber}
                       onChange={(e) => {
-                        setGstSkipped(false);
                         setGstNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15));
                       }}
                       placeholder="e.g. 27AAAAA0000A1Z5"
@@ -303,7 +304,6 @@ export default function ShopkeeperRegisterPage() {
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       {gstState === "checking" && <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />}
                       {gstState === "verified" && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                      {gstState === "not_active" && <AlertTriangle className="w-5 h-5 text-orange-500" />}
                       {(gstState === "failed" || gstState === "invalid_format") && <XCircle className="w-5 h-5 text-red-500" />}
                       {gstState === "api_unavailable" && <AlertCircle className="w-5 h-5 text-amber-500" />}
                     </div>
@@ -336,97 +336,40 @@ export default function ShopkeeperRegisterPage() {
                   </div>
                 )}
 
-                {/* ✅ Verified & Active */}
+                {/* ✅ Verified */}
                 {gstState === "verified" && gstResult && (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <Award className="w-5 h-5 text-green-600 flex-shrink-0" />
-                      <p className="text-sm font-bold text-green-800">✅ GST Verified — Details Auto-filled</p>
+                      <p className="text-sm font-bold text-green-800">✅ GST Verified</p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-white rounded-lg p-3 border border-green-100 col-span-2">
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5 flex items-center gap-1">
                           <Building2 className="w-3 h-3" /> Business Name
                         </p>
-                        <p className="text-sm font-bold text-gray-900">{gstResult.legalName || gstResult.businessName}</p>
+                        <p className="text-sm font-bold text-gray-900">{gstResult.legalName}</p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 border border-green-100">
-                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Trade Name</p>
-                        <p className="text-sm font-bold text-gray-900 line-clamp-1">{gstResult.tradeName || "—"}</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 border border-green-100">
+                      <div className="bg-white rounded-lg p-3 border border-green-100 col-span-2">
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Business Type</p>
-                        <p className="text-sm font-bold text-gray-900 line-clamp-1">{gstResult.businessType || "—"}</p>
+                        <p className="text-xs font-bold text-gray-900">{gstResult.nature || "—"}</p>
                       </div>
                       <div className="bg-white rounded-lg p-3 border border-green-100">
-                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">GST Status</p>
-                        <p className="text-sm font-bold text-green-600 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> {gstResult.gstStatus}
-                        </p>
+                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Registration Type</p>
+                        <p className="text-sm font-bold text-gray-900">{gstResult.taxType || "—"}</p>
                       </div>
                       <div className="bg-white rounded-lg p-3 border border-green-100">
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">State</p>
-                        <p className="text-sm font-bold text-gray-900">{gstResult.state}</p>
-                      </div>
-                      {gstResult.district && (
-                        <div className="bg-white rounded-lg p-3 border border-green-100">
-                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">District</p>
-                          <p className="text-sm font-bold text-gray-900">{gstResult.district}</p>
-                        </div>
-                      )}
-                      {gstResult.pincode && (
-                        <div className="bg-white rounded-lg p-3 border border-green-100">
-                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Pincode</p>
-                          <p className="text-sm font-bold text-gray-900">{gstResult.pincode}</p>
-                        </div>
-                      )}
-                      <div className="bg-white rounded-lg p-3 border border-green-100 col-span-2">
-                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" /> Address
-                        </p>
-                        <p className="text-xs text-gray-700">{gstResult.principalAddress || "—"}</p>
+                        <p className="text-sm font-bold text-gray-900">{gstResult.stateCode || "—"}</p>
                       </div>
                     </div>
                     <div className="mt-3 flex items-center gap-2 bg-green-100 rounded-lg px-3 py-2">
                       <Award className="w-4 h-4 text-green-700 flex-shrink-0" />
-                      <p className="text-xs font-semibold text-green-800">🏆 Your shop will display a GST Verified badge to customers</p>
+                      <p className="text-xs font-semibold text-green-800">🏆 GST VERIFIED SHOP assigned</p>
                     </div>
                   </div>
                 )}
 
-                {/* ❌ GST Not Active — BLOCKS proceed */}
-                {gstState === "not_active" && gstResult && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                      <p className="text-sm font-bold text-orange-800">❌ GST Not Active</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div className="bg-white rounded-lg p-3 border border-orange-100 col-span-2">
-                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Business Name</p>
-                        <p className="text-sm font-bold text-gray-900">{gstResult.businessName}</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 border border-orange-100">
-                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">GST Status</p>
-                        <p className="text-sm font-bold text-orange-600">{gstResult.gstStatus}</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 border border-orange-100">
-                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">State</p>
-                        <p className="text-sm font-bold text-gray-900">{gstResult.state}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-orange-700 mb-3">
-                      Your GST registration is not Active. To get the verified badge, please resolve this with the GST portal, or clear the field and skip GST verification.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => { setGstNumber(""); setGstState("idle"); setGstResult(null); setGstSkipped(true); }}
-                      className="w-full text-sm font-semibold text-orange-700 bg-orange-100 hover:bg-orange-200 py-2 rounded-lg transition-colors"
-                    >
-                      Clear & Skip GST Verification
-                    </button>
-                  </div>
-                )}
 
                 {/* API Unavailable — allow manual fallback */}
                 {gstState === "api_unavailable" && (
@@ -648,8 +591,6 @@ export default function ShopkeeperRegisterPage() {
                   <><Loader2 className="w-4 h-4 animate-spin" /> Registering…</>
                 ) : step === STEPS.length ? (
                   <><CheckCircle2 className="w-4 h-4" /> Complete Registration</>
-                ) : step === 1 && gstState === "not_active" ? (
-                  <>❌ Resolve GST Status to Continue</>
                 ) : step === 1 && gstState === "checking" ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>
                 ) : (

@@ -49,7 +49,7 @@ export default function ShopCard({
             )}
             {gstVerified && (
               <span className="bg-amber-400/95 text-amber-900 text-[11px] font-black px-2 py-0.5 rounded-md backdrop-blur-sm flex items-center gap-1">
-                🏆 GST VERIFIED
+                🏆 GST VERIFIED SHOP
               </span>
             )}
             {verified && !gstVerified && (

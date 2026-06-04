@@ -160,15 +160,11 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
                 )}
               </div>
               <p className="text-sm text-gray-500 mb-3">{shop.category}</p>
-              
               {/* Trust Badges Row */}
               <div className="flex flex-wrap gap-2 mb-4">
-                <span className="flex items-center gap-1 text-xs font-bold text-green-700 bg-green-50 border border-green-100 px-2 py-1 rounded-lg">
-                  <ShieldCheck className="w-3.5 h-3.5" /> GST Verified
-                </span>
-                {shop.gstStatus === "Active" && (
-                  <span className="flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-1 rounded-lg">
-                    <CheckCircle2 className="w-3 h-3" /> Active Business
+                {shop.gstVerified && (
+                  <span className="flex items-center gap-1 text-xs font-black text-amber-900 bg-amber-400 border border-amber-200 px-2 py-1 rounded-lg">
+                    🏆 GST VERIFIED SHOP
                   </span>
                 )}
                 {shop.aadhaarVerified && (
@@ -277,7 +273,7 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
               </div>
               <div>
                 <p className="font-bold text-green-900 flex items-center gap-2">
-                  🏆 GST Verified Business
+                  🏆 GST VERIFIED SHOP
                 </p>
                 <p className="text-xs text-green-700">Verified against government GST portal</p>
               </div>
