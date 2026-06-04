@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, use, useEffect } from "react";
-import { ArrowLeft, Star, MapPin, ShieldCheck, Clock, Lock, Truck, Heart, Share2, Phone, MessageCircle, ExternalLink, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Star, MapPin, ShieldCheck, Clock, Lock, Truck, Heart, Share2, Phone, MessageCircle, ExternalLink, ChevronDown, ChevronUp, CheckCircle2, Award, Building2 } from "lucide-react";
 import OfferLockModal from "@/components/OfferLockModal";
 import CardOffer from "@/components/CardOffer";
 import dynamic from "next/dynamic";
@@ -19,6 +19,10 @@ const SHOPS: Record<string, {
   openingHours: string; rating: number; reviews: number;
   verified: boolean; deliveryAvailable: boolean; isOpen: boolean;
   gstStatus?: string; aadhaarVerified?: boolean;
+  // GST profile fields
+  gstVerified?: boolean; gstNumber?: string | null;
+  businessName?: string | null; tradeName?: string | null;
+  legalName?: string | null; state?: string | null;
   products: { id: string; title: string; price: number; offerPrice: number; image: string; }[];
   cardOffers: { bankName: string; cardType: string; offerText: string; minAmount?: number }[];
 }> = {
@@ -34,6 +38,9 @@ const SHOPS: Record<string, {
     category: "Electronics & Gadgets", openingHours: "10:00 AM – 9:00 PM",
     rating: 4.8, reviews: 342, verified: true, deliveryAvailable: true, isOpen: true,
     gstStatus: "Active", aadhaarVerified: true,
+    gstVerified: true, gstNumber: "27AAFCE1683D1ZR",
+    businessName: "Tech Hub Electronics India Ltd", tradeName: "Tech Hub Electronics",
+    legalName: "Tech Hub Electronics India Ltd", state: "Maharashtra",
     products: [
       { id: "101", title: "Sony PlayStation 5 Disc Edition", price: 49990, offerPrice: 44990, image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?q=80&w=400&auto=format&fit=crop" },
       { id: "102", title: "Apple AirPods Pro (2nd Gen)", price: 24900, offerPrice: 21500, image: "https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?q=80&w=400&auto=format&fit=crop" },
@@ -81,7 +88,13 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
     address: shopData.address,
     landmark: shopData.landmark || fallbackShop.landmark,
     googleMapLink: shopData.google_map_link || fallbackShop.googleMapLink,
+    gstNumber: shopData.gst_number || null,
+    gstVerified: shopData.gst_verified || false,
     gstStatus: shopData.gst_status || (shopData.gst_verified ? "Active" : undefined),
+    businessName: shopData.business_name || null,
+    tradeName: shopData.trade_name || null,
+    legalName: shopData.legal_name || null,
+    state: shopData.state || null,
     aadhaarVerified: shopData.aadhaar_verified || false,
     verified: shopData.verified || false,
     deliveryAvailable: shopData.delivery_available || false,
@@ -94,6 +107,12 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
       cardOffers: p.cardOffers || []
     })) || fallbackShop.products
   } : fallbackShop;
+
+  /** Mask GST number: show first 5 + last 3 chars, hide middle */
+  function maskGST(gst: string): string {
+    if (!gst || gst.length < 10) return gst;
+    return `${gst.slice(0, 5)}${'*'.repeat(gst.length - 8)}${gst.slice(-3)}`;
+  }
 
   const [lockProduct, setLockProduct] = useState<any | null>(null);
   const [offersOpen, setOffersOpen] = useState(true);
@@ -248,6 +267,53 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           )}
         </div>
+
+        {/* ── GST Verified Profile Section ── */}
+        {shop.gstVerified && (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 shadow-sm p-5 mb-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Award className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-green-900 flex items-center gap-2">
+                  🏆 GST Verified Business
+                </p>
+                <p className="text-xs text-green-700">Verified against government GST portal</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {shop.businessName && (
+                <div className="bg-white rounded-xl p-3 border border-green-100">
+                  <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <Building2 className="w-3 h-3" /> Business Name
+                  </p>
+                  <p className="text-sm font-bold text-gray-900">{shop.businessName}</p>
+                </div>
+              )}
+              {shop.gstNumber && (
+                <div className="bg-white rounded-xl p-3 border border-green-100">
+                  <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> GST Number
+                  </p>
+                  <p className="text-sm font-bold text-gray-900 font-mono tracking-wider">{maskGST(shop.gstNumber)}</p>
+                </div>
+              )}
+              {shop.state && (
+                <div className="bg-white rounded-xl p-3 border border-green-100">
+                  <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> State
+                  </p>
+                  <p className="text-sm font-bold text-gray-900">{shop.state}</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-3 flex items-center gap-2 bg-green-100 rounded-lg px-3 py-2">
+              <CheckCircle2 className="w-4 h-4 text-green-700 flex-shrink-0" />
+              <p className="text-xs text-green-800 font-medium">GST Status: <span className="font-bold">Active</span> — This is a legitimate registered business</p>
+            </div>
+          </div>
+        )}
 
         {/* Products */}
         <div>

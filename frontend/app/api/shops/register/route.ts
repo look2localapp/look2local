@@ -13,7 +13,8 @@ export async function POST(req: Request) {
       opening_time, closing_time, delivery_available,
       shop_image, banner_image,
       gst_number, gst_verified, business_name, gst_status,
-      legal_name, trade_name, business_type, aadhaar_verified, principal_address
+      legal_name, trade_name, business_type, aadhaar_verified,
+      principal_address, state, last_filing_status
     } = body;
 
     // Validate required fields
@@ -75,6 +76,8 @@ export async function POST(req: Request) {
         business_type: business_type ?? null,
         aadhaar_verified: aadhaar_verified ?? false,
         principal_address: principal_address ?? null,
+        state: state ?? null,
+        last_filing_status: last_filing_status ?? null,
         shopkeeperId: shopkeeperId,
       },
     });

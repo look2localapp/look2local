@@ -1,8 +1,8 @@
 /**
- * POST /api/verify-gst
+ * POST /api/gst/verify
  * ─────────────────────────────────────────────────────────────────────────────
- * Real GST verification via RapidAPI (server-side only — key never exposed).
- * Delegates to shared lib/gstVerify.ts helper.
+ * Canonical GST verification endpoint (per spec).
+ * Identical behaviour to /api/verify-gst — delegates to shared helper.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import { NextResponse } from "next/server";
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (err) {
-    console.error("[/api/verify-gst] Unexpected error:", err);
+    console.error("[/api/gst/verify] Unexpected error:", err);
     return NextResponse.json(
       {
         success: false,
