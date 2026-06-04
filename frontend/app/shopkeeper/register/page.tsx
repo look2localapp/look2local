@@ -24,16 +24,21 @@ type GSTState = "idle" | "checking" | "verified" | "not_active" | "failed" | "in
 
 interface GSTResult {
   gstNumber: string;
-  businessName: string;
+  businessName: string;   // legalName alias
   tradeName: string;
   legalName: string;
+  taxType: string;        // taxPayerType e.g. "Regular"
+  businessType: string;   // natureOfBusiness e.g. "Retail Business"
   gstStatus: string;
   state: string;
+  district: string;
+  pincode: string;
   principalAddress: string;
   lastFilingStatus: string;
   gstVerified: boolean;
   stateCode: string;
   pan: string;
+  verificationDate: string;
 }
 
 export default function ShopkeeperRegisterPage() {
@@ -56,9 +61,10 @@ export default function ShopkeeperRegisterPage() {
   const [category, setCategory] = useState("");
   const [address, setAddress] = useState("");
   const [state, setState] = useState("");
+  const [district, setDistrict] = useState("");
+  const [pin, setPin] = useState("");
   const [landmark, setLandmark] = useState("");
   const [city, setCity] = useState("");
-  const [pin, setPin] = useState("");
   const [mapLink, setMapLink] = useState("");
   const [password, setPassword] = useState("");
   const [detectingGPS, setDetectingGPS] = useState(false);
@@ -91,23 +97,28 @@ export default function ShopkeeperRegisterPage() {
         return;
       }
 
-      // Success
+      // Success — new gst-insights-api shape
       setGstResult(data as GSTResult);
 
       if (data.gstVerified) {
         setGstState("verified");
-        // ── AUTO-FILL UX ──────────────────────────────────────────────────
-        setShopName(data.tradeName || data.businessName || "");
+        // ── AUTO-FILL from API response ──────────────────────────────────
+        setShopName(data.tradeName || data.legalName || data.businessName || "");
         setAddress(data.principalAddress || "");
         setState(data.state || "");
-        // Category deduction from common GST business types
+        setDistrict(data.district || "");
+        setPin(data.pincode || "");
+        // Smart category deduction from businessType
         const btype = (data.businessType || "").toLowerCase();
-        if (btype.includes("retail") || btype.includes("electronics")) setCategory("Electronics & Gadgets");
-        else if (btype.includes("food") || btype.includes("bakery")) setCategory("Bakery & Cafe");
-        else if (btype.includes("cloth") || btype.includes("fashion")) setCategory("Clothing & Fashion");
-        else if (btype.includes("grocery")) setCategory("Grocery & Supermarket");
+        if (btype.includes("retail") && btype.includes("electron")) setCategory("Electronics & Gadgets");
+        else if (btype.includes("retail")) setCategory("Other");
+        else if (btype.includes("food") || btype.includes("bakery") || btype.includes("restaurant")) setCategory("Bakery & Cafe");
+        else if (btype.includes("cloth") || btype.includes("fashion") || btype.includes("garment")) setCategory("Clothing & Fashion");
+        else if (btype.includes("grocery") || btype.includes("kirana")) setCategory("Grocery & Supermarket");
+        else if (btype.includes("pharma") || btype.includes("medicine")) setCategory("Pharmacy");
+        else if (btype.includes("footwear") || btype.includes("shoe")) setCategory("Footwear");
       } else {
-        // GST number is valid but status is NOT Active
+        // GST valid but NOT Active
         setGstState("not_active");
       }
     } catch {
@@ -185,13 +196,18 @@ export default function ShopkeeperRegisterPage() {
             banner_image: bannerImage,
             gst_number: gstNumber || null,
             gst_verified: gstState === "verified",
-            business_name: gstResult?.businessName || null,
+            business_name: gstResult?.businessName || gstResult?.legalName || null,
             gst_status: gstResult?.gstStatus || null,
             legal_name: gstResult?.legalName || null,
             trade_name: gstResult?.tradeName || null,
+            tax_type: gstResult?.taxType || null,
+            business_type: gstResult?.businessType || null,
             principal_address: gstResult?.principalAddress || null,
             state: gstResult?.state || state || null,
+            district: gstResult?.district || district || null,
+            pincode: gstResult?.pincode || pin || null,
             last_filing_status: gstResult?.lastFilingStatus || null,
+            verification_date: gstResult?.verificationDate || null,
           }),
         });
         const data = await res.json();
@@ -332,11 +348,15 @@ export default function ShopkeeperRegisterPage() {
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5 flex items-center gap-1">
                           <Building2 className="w-3 h-3" /> Business Name
                         </p>
-                        <p className="text-sm font-bold text-gray-900">{gstResult.businessName}</p>
+                        <p className="text-sm font-bold text-gray-900">{gstResult.legalName || gstResult.businessName}</p>
                       </div>
                       <div className="bg-white rounded-lg p-3 border border-green-100">
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Trade Name</p>
-                        <p className="text-sm font-bold text-gray-900 line-clamp-1">{gstResult.tradeName}</p>
+                        <p className="text-sm font-bold text-gray-900 line-clamp-1">{gstResult.tradeName || "—"}</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-green-100">
+                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Business Type</p>
+                        <p className="text-sm font-bold text-gray-900 line-clamp-1">{gstResult.businessType || "—"}</p>
                       </div>
                       <div className="bg-white rounded-lg p-3 border border-green-100">
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">GST Status</p>
@@ -348,13 +368,21 @@ export default function ShopkeeperRegisterPage() {
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">State</p>
                         <p className="text-sm font-bold text-gray-900">{gstResult.state}</p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 border border-green-100">
-                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Last Filing</p>
-                        <p className="text-sm font-bold text-gray-900">{gstResult.lastFilingStatus}</p>
-                      </div>
+                      {gstResult.district && (
+                        <div className="bg-white rounded-lg p-3 border border-green-100">
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">District</p>
+                          <p className="text-sm font-bold text-gray-900">{gstResult.district}</p>
+                        </div>
+                      )}
+                      {gstResult.pincode && (
+                        <div className="bg-white rounded-lg p-3 border border-green-100">
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">Pincode</p>
+                          <p className="text-sm font-bold text-gray-900">{gstResult.pincode}</p>
+                        </div>
+                      )}
                       <div className="bg-white rounded-lg p-3 border border-green-100 col-span-2">
                         <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" /> Principal Address
+                          <MapPin className="w-3 h-3" /> Address
                         </p>
                         <p className="text-xs text-gray-700">{gstResult.principalAddress || "—"}</p>
                       </div>

@@ -60,19 +60,23 @@ model Shop {
   google_map_link String
   shop_image      String   // Cloudinary URL
   banner_image    String   // Cloudinary URL
-  // ── GST Verification Fields ─────────────────────────────
-  gst_number        String?
-  gst_verified      Boolean  @default(false)
-  business_name     String?
-  gst_status        String?   // e.g. "Active", "Cancelled", "Suspended"
-  legal_name        String?
-  trade_name        String?
-  business_type     String?
-  aadhaar_verified  Boolean? @default(false)
-  principal_address String?
-  state             String?   // GST-derived state name (e.g. "Andhra Pradesh")
-  last_filing_status String?  // Last GST return filing status from RapidAPI
-  // ────────────────────────────────────────────────────────
+  // ── GST Verification Fields ───────────────────────────────────────
+  gst_number           String?
+  gst_verified         Boolean  @default(false)
+  business_name        String?   // legalName (alias for compat)
+  gst_status           String?   // "Active" | "Cancelled" | "Suspended"
+  legal_name           String?   // legalName from API
+  trade_name           String?   // tradeName / tradeNam
+  tax_type             String?   // taxPayerType e.g. "Regular"
+  business_type        String?   // natureOfBusiness e.g. "Retail Business"
+  aadhaar_verified     Boolean? @default(false)
+  principal_address    String?
+  state                String?   // decoded state name (e.g. "Andhra Pradesh")
+  district             String?   // from additionalAddress[0].address.dst
+  pincode              String?   // from additionalAddress[0].address.pncd
+  last_filing_status   String?   // last GST return filing status
+  verification_date    DateTime? // timestamp of GST verification
+  // ───────────────────────────────────────────────────────────
   category        String
   opening_hours   String   @default("10:00 AM - 9:00 PM")
   verified        Boolean  @default(false)

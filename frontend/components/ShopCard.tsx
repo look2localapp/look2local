@@ -10,6 +10,7 @@ interface ShopCardProps {
   distance: string;
   imageUrl: string;
   verified?: boolean;
+  gstVerified?: boolean;
   isOpen?: boolean;
   deliveryTime?: string;
 }
@@ -22,6 +23,7 @@ export default function ShopCard({
   distance,
   imageUrl,
   verified = true,
+  gstVerified = false,
   isOpen = true,
   deliveryTime = "30–45 min",
 }: ShopCardProps) {
@@ -45,7 +47,12 @@ export default function ShopCard({
                 Closed
               </span>
             )}
-            {verified && (
+            {gstVerified && (
+              <span className="bg-amber-400/95 text-amber-900 text-[11px] font-black px-2 py-0.5 rounded-md backdrop-blur-sm flex items-center gap-1">
+                🏆 GST VERIFIED
+              </span>
+            )}
+            {verified && !gstVerified && (
               <span className="bg-white/90 text-blue-600 text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 backdrop-blur-sm">
                 <ShieldCheck className="w-3 h-3" /> Verified
               </span>

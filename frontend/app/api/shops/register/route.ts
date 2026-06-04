@@ -13,8 +13,8 @@ export async function POST(req: Request) {
       opening_time, closing_time, delivery_available,
       shop_image, banner_image,
       gst_number, gst_verified, business_name, gst_status,
-      legal_name, trade_name, business_type, aadhaar_verified,
-      principal_address, state, last_filing_status
+      legal_name, trade_name, tax_type, business_type, aadhaar_verified,
+      principal_address, state, district, pincode, last_filing_status, verification_date
     } = body;
 
     // Validate required fields
@@ -77,7 +77,11 @@ export async function POST(req: Request) {
         aadhaar_verified: aadhaar_verified ?? false,
         principal_address: principal_address ?? null,
         state: state ?? null,
+        district: district ?? null,
+        pincode: pincode ?? null,
+        tax_type: tax_type ?? null,
         last_filing_status: last_filing_status ?? null,
+        verification_date: verification_date ? new Date(verification_date) : null,
         shopkeeperId: shopkeeperId,
       },
     });
