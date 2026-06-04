@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Store, Menu, X, Video, ShoppingBag, Search, User, Ticket, Heart } from "lucide-react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { Show, UserButton } from "@clerk/nextjs";
 import NotificationBell from "@/components/NotificationBell";
@@ -12,6 +12,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleSearch = () => {
     if (searchVal.trim()) router.push(`/search?q=${encodeURIComponent(searchVal.trim())}`);
@@ -25,30 +26,33 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center flex-shrink-0">
             <div className="w-36 h-10 relative flex items-center justify-start">
-              <Image src="/logo.jpeg" alt="Look2Local" fill className="object-contain object-left" />
+              <Image src="/look2local_logo.png" alt="Look2Local" fill className="object-contain object-left" />
             </div>
           </Link>
 
           {/* Search — full center bar like Flipkart */}
-          <div className="flex-1 hidden md:flex items-center max-w-2xl mx-auto">
-            <div className="flex w-full border border-gray-200 rounded-lg overflow-hidden hover:border-orange-400 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
-              <input
-                type="text"
-                value={searchVal}
-                onChange={e => setSearchVal(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSearch()}
-                placeholder="Search mobiles, laptops, TVs…"
-                className="flex-1 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none bg-white"
-                suppressHydrationWarning
-              />
-              <button
-                onClick={handleSearch}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 text-sm font-bold transition-colors flex items-center gap-1.5"
-              >
-                <Search className="w-4 h-4" /> Search
-              </button>
+          {pathname !== "/" && (
+            <div className="flex-1 hidden md:flex items-center max-w-2xl mx-auto">
+              <div className="flex w-full border border-gray-200 rounded-lg overflow-hidden hover:border-orange-400 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+                <input
+                  type="text"
+                  value={searchVal}
+                  onChange={e => setSearchVal(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleSearch()}
+                  placeholder="Search mobiles, laptops, TVs…"
+                  className="flex-1 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none bg-white"
+                  suppressHydrationWarning
+                />
+                <button
+                  onClick={handleSearch}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 text-sm font-bold transition-colors flex items-center gap-1.5"
+                >
+                  <Search className="w-4 h-4" /> Search
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+          {pathname === "/" && <div className="flex-1 hidden md:block"></div>}
 
           {/* Right actions */}
           <div className="hidden md:flex items-center gap-1 flex-shrink-0">

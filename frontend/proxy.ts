@@ -1,11 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// Routes that require authentication
+// Routes that require Clerk authentication (Customers and Admins only, NO shopkeepers)
 const isProtectedRoute = createRouteMatcher([
-  "/shopkeeper/dashboard(.*)",
-  "/shopkeeper/products(.*)",
-  "/shopkeeper/orders(.*)",
-  "/shopkeeper/analytics(.*)",
   "/admin(.*)",
   "/profile(.*)",
   "/api/lock-offer(.*)",

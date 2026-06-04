@@ -168,6 +168,8 @@ export async function GET(req: NextRequest) {
           aadhaarVerified: shop.aadhaar_verified || false,
           successfulOrders: successfulOrders || 25, // default
           cardOffers: finalCardOffers,
+          googleMapLink: shop.google_map_link,
+          address: shop.address,
         });
       }
 

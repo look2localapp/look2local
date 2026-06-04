@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { BarChart3, Package, Video, Settings, ShoppingBag, Store, PlusCircle, Search, Edit2, Trash2, X, ArrowLeft } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
@@ -22,8 +23,27 @@ const NAV = [
 ];
 
 export default function ShopkeeperProductsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/shopkeeper/stats");
+        if (!res.ok) {
+          router.push("/shopkeeper/login");
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error(err);
+        router.push("/shopkeeper/login");
+      }
+    }
+    checkAuth();
+  }, [router]);
   const [bankOffers, setBankOffers] = useState([{ bank: "", type: "", text: "" }]);
 
   // Autocomplete State
@@ -73,6 +93,14 @@ export default function ShopkeeperProductsPage() {
 
   const addBankOffer = () => setBankOffers([...bankOffers, { bank: "", type: "", text: "" }]);
   const removeBankOffer = (i: number) => setBankOffers(bankOffers.filter((_, idx) => idx !== i));
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-64px)] bg-gray-50">

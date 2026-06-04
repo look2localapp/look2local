@@ -1,12 +1,11 @@
-// app/api/subscription/status/route.ts
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getShopkeeperId } from "@/lib/authHelper";
 import prisma from "@/lib/prisma";
 import { getTrialStatus } from "@/lib/subscription";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const userId = await getShopkeeperId();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

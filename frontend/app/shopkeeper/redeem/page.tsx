@@ -32,12 +32,29 @@ interface CouponDetails {
 
 export default function ShopkeeperRedeemPage() {
   const router = useRouter();
+  const [authLoading, setAuthLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
   const [redeemedCoupon, setRedeemedCoupon] = useState<CouponDetails | null>(null);
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/shopkeeper/stats");
+        if (!res.ok) {
+          router.push("/shopkeeper/login");
+        } else {
+          setAuthLoading(false);
+        }
+      } catch (err) {
+        router.push("/shopkeeper/login");
+      }
+    }
+    checkAuth();
+  }, [router]);
   
   // Camera state
   const [cameraError, setCameraError] = useState("");
@@ -127,6 +144,14 @@ export default function ShopkeeperRedeemPage() {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

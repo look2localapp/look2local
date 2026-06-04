@@ -1,18 +1,9 @@
 import { cookies } from "next/headers";
-import { auth } from "@clerk/nextjs/server";
 import prisma from "./prisma";
 import { Shop } from "@prisma/client";
 
 export async function getShopkeeperId(): Promise<string | null> {
-  // 1. Try Clerk auth first (if integrated)
-  try {
-    const { userId } = await auth();
-    if (userId) return userId;
-  } catch (e) {
-    // Ignore and fallback
-  }
-
-  // 2. Try custom cookie session fallback
+  // Try custom cookie session only
   try {
     const cookieStore = await cookies();
     const session = cookieStore.get("shopkeeper_session");

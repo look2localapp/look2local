@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,7 +22,6 @@ interface InventoryItem {
 }
 
 export default function InventoryPage() {
-  const { isSignedIn } = useUser();
   const router = useRouter();
   const [products, setProducts] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,14 +31,17 @@ export default function InventoryPage() {
   const [saved, setSaved] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isSignedIn) { router.push("/sign-in"); return; }
     fetchInventory();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSignedIn]);
+  }, []);
 
   const fetchInventory = async () => {
     setLoading(true);
     const res = await fetch("/api/inventory/update");
+    if (res.status === 401) {
+      router.push("/shopkeeper/login");
+      return;
+    }
     const data = await res.json();
     const items = data.products || [];
     setProducts(items);

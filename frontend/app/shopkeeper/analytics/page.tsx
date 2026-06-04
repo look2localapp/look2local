@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BarChart3, Package, Video, Settings, ShoppingBag, Store, TrendingUp, Eye, Users, Lock, ArrowUpRight } from "lucide-react";
 
@@ -17,6 +19,32 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MAX = Math.max(...WEEKLY);
 
 export default function ShopkeeperAnalyticsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/shopkeeper/stats");
+        if (!res.ok) {
+          router.push("/shopkeeper/login");
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        router.push("/shopkeeper/login");
+      }
+    }
+    checkAuth();
+  }, [router]);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-[calc(100vh-64px)] bg-gray-50">
       <aside className="w-64 bg-gray-900 text-white hidden md:flex flex-col flex-shrink-0">

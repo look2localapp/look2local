@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
   Crown, CheckCircle2, Zap, Clock, AlertTriangle,
@@ -35,7 +34,6 @@ const STANDARD_FEATURES = [
 ];
 
 export default function SubscriptionPage() {
-  const { isSignedIn } = useUser();
   const router = useRouter();
   const [status, setStatus] = useState<SubStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +41,6 @@ export default function SubscriptionPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!isSignedIn) { router.push("/sign-in"); return; }
     fetchStatus();
     // Load Razorpay script
     const script = document.createElement("script");
@@ -51,10 +48,14 @@ export default function SubscriptionPage() {
     document.body.appendChild(script);
     return () => { document.body.removeChild(script); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSignedIn]);
+  }, []);
 
   const fetchStatus = async () => {
     const res = await fetch("/api/subscription/status");
+    if (res.status === 401) {
+      router.push("/shopkeeper/login");
+      return;
+    }
     const data = await res.json();
     setStatus(data);
     setLoading(false);

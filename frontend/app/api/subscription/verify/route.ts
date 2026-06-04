@@ -1,13 +1,12 @@
-// app/api/subscription/verify/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getShopkeeperId } from "@/lib/authHelper";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
 import { getSubscriptionEndDate, PLAN_PRICES } from "@/lib/subscription";
 import prisma from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const userId = await getShopkeeperId();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -105,8 +105,7 @@ export default function ShopkeeperRegisterPage() {
       setGstResult(data as GSTResult);
       setGstState("verified");
 
-      // ── AUTO-FILL: Shop Name = legalName, State, District, Pincode ───────
-      setShopName(data.legalName || "");
+      // ── AUTO-FILL: State, District, Pincode ───────
       setAddress(data.principalAddress || "");
       setState(data.stateCode || "");
       setDistrict(data.district || "");
@@ -239,7 +238,7 @@ export default function ShopkeeperRegisterPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="mb-4">
-            <Image src="/logo.jpeg" alt="Look2Local" width={80} height={80} className="w-20 h-20 rounded-2xl mx-auto shadow-lg shadow-blue-500/30 object-contain bg-white" />
+            <Image src="/look2local_logo.png" alt="Look2Local" width={80} height={80} className="w-20 h-20 rounded-2xl mx-auto shadow-lg shadow-blue-500/30 object-contain bg-white" />
           </div>
           <h1 className="text-2xl font-extrabold text-white">Register Your Shop</h1>
           <p className="text-blue-300 text-sm mt-1">Join 2,000+ shops on Look2Local — It&apos;s Free</p>
@@ -402,9 +401,9 @@ export default function ShopkeeperRegisterPage() {
                   </div>
                 )}
 
-                {/* Password Setup */}
                 <div className="border-t border-gray-100 pt-5 mt-4">
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Create Look2Local Password *</label>
+                  <p className="text-xs text-gray-500 mb-2">Password must be at least 8 characters long.</p>
                   <input
                     required
                     type="password"
@@ -488,14 +487,26 @@ export default function ShopkeeperRegisterPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Address (Principal Place of Business) *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Address (Shop no., Building, Street, Area) *</label>
                   <textarea required rows={3} value={address} onChange={e => setAddress(e.target.value)} placeholder="Shop no., Building, Street, Area…"
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all resize-none" />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">State</label>
-                  <input type="text" value={state} onChange={e => setState(e.target.value)} placeholder="e.g. Andhra Pradesh"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">City *</label>
+                    <input required type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Vijayawada"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">State *</label>
+                    <input required type="text" value={state} onChange={e => setState(e.target.value)} placeholder="e.g. Andhra Pradesh"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">PIN Code *</label>
+                    <input required type="text" value={pin} onChange={e => setPin(e.target.value)} placeholder="e.g. 520001"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">

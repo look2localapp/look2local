@@ -45,6 +45,16 @@ interface LockItem {
 export default function ShopkeeperDashboard() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const router = useRouter();
+
+  const handleSignOut = async () => {
+    try {
+      await fetch("/api/shopkeeper/logout", { method: "POST" });
+      router.push("/shopkeeper/login");
+    } catch (err) {
+      console.error("Sign out error:", err);
+      router.push("/shopkeeper/login");
+    }
+  };
   
   // Dynamic DB states
   const [shopName, setShopName] = useState("My Shop");
@@ -139,9 +149,9 @@ export default function ShopkeeperDashboard() {
         </nav>
 
         <div className="p-4 border-t border-white/10 space-y-2">
-          <Link href="/shopkeeper/login" className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 px-3 py-2.5 rounded-xl hover:bg-red-500/10 transition-colors">
+          <button onClick={handleSignOut} className="w-full flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 px-3 py-2.5 rounded-xl hover:bg-red-500/10 transition-colors text-left cursor-pointer">
             → Sign Out
-          </Link>
+          </button>
         </div>
       </aside>
 

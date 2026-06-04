@@ -1,11 +1,10 @@
-// app/api/inventory/update/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getShopkeeperId } from "@/lib/authHelper";
 import prisma from "@/lib/prisma";
 
 export async function PUT(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const userId = await getShopkeeperId();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -43,7 +42,7 @@ export async function PUT(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const userId = await getShopkeeperId();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

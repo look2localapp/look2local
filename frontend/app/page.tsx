@@ -139,14 +139,11 @@ export default function HomePage() {
       {/* HERO Section with Search Comparison Widget */}
       <div className="bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] pt-12 pb-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <span className="text-orange-400 text-xs font-bold tracking-widest uppercase mb-3 px-3 py-1 bg-white/5 rounded-full inline-flex items-center gap-1.5 border border-white/10">
-            <Zap className="w-3.5 h-3.5" /> Hyperlocal Comparison Hero
-          </span>
           <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-3 leading-tight">
-            Find local shops. <span className="text-orange-400">Compare real prices.</span>
+            Compare Nearby. <span className="text-orange-400">Save More.</span>
           </h1>
-          <p className="text-blue-200 text-sm md:text-base mb-8 max-w-xl mx-auto">
-            Search any mobile or laptop, instantly compare price &amp; distance from nearby shops, and buy a discount coupon!
+          <p className="text-blue-200 text-sm md:text-base mb-8 max-w-2xl mx-auto">
+            Search any product, compare prices from nearby stores, check card offers, and unlock exclusive local discounts before you buy.
           </p>
 
           {/* Search/Comparison Hero Input */}
@@ -370,7 +367,7 @@ export default function HomePage() {
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
             <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
               {CATEGORIES.map(({ icon: Icon, label, q, color }) => (
-                <button key={q} onClick={() => handleCompare(q)}
+                <button key={q} onClick={() => router.push(`/search?q=${encodeURIComponent(q)}`)}
                   className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer group">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color} group-hover:scale-110 transition-transform shadow-sm`}>
                     <Icon className="w-6 h-6" />
@@ -389,8 +386,8 @@ export default function HomePage() {
             <ShieldCheck className="w-8 h-8 mb-3 opacity-80" />
             <h3 className="font-heading text-lg font-bold mb-1">GST &amp; Aadhaar Verified Sellers</h3>
             <p className="text-blue-200 text-sm mb-4">Every shopkeeper is verified with government GST records &amp; biometric ID validation. Shop secure.</p>
-            <Link href="/shops" className="bg-white text-blue-700 font-bold text-xs px-4 py-2 rounded-xl inline-flex items-center gap-1.5 hover:bg-blue-50 transition-colors">
-              Browse Shops <ArrowRight className="w-3.5 h-3.5" />
+            <Link href="/shopkeeper/register" className="bg-white text-blue-700 font-bold text-xs px-4 py-2 rounded-xl inline-flex items-center gap-1.5 hover:bg-blue-50 transition-colors">
+              Register Your Shop <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
           <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-3xl p-6 text-white relative overflow-hidden shadow-md">
@@ -398,8 +395,8 @@ export default function HomePage() {
             <Zap className="w-8 h-8 mb-3 opacity-80" />
             <h3 className="font-heading text-lg font-bold mb-1">Lock Prices Instantly</h3>
             <p className="text-orange-100 text-sm mb-4">Visit the store today! Reserve the deal before you visit. Price guaranteed for 24 hours.</p>
-            <Link href="/shopkeeper/register" className="bg-white text-orange-600 font-bold text-xs px-4 py-2 rounded-xl inline-flex items-center gap-1.5 hover:bg-orange-50 transition-colors">
-              Register Your Shop <ArrowRight className="w-3.5 h-3.5" />
+            <Link href="/shops" className="bg-white text-orange-600 font-bold text-xs px-4 py-2 rounded-xl inline-flex items-center gap-1.5 hover:bg-orange-50 transition-colors">
+              Browse Shops <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </section>

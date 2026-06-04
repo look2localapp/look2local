@@ -40,51 +40,49 @@ export async function POST(req: Request) {
     // Create a unique ID for the shopkeeper
     const shopkeeperId = crypto.randomUUID();
 
-    // Create the Shopkeeper record
-    shopkeeper = await prisma.shopkeeper.create({
-      data: {
-        id: shopkeeperId,
-        email: email,
-        passwordHash: password, // In production, hash this with bcrypt!
-      },
-    });
-
-    const opening_hours = `${opening_time ?? "10:00"} AM - ${closing_time ?? "9:00"} PM`;
-
-    // Create the shop
-    const shop = await prisma.shop.create({
-      data: {
-        shop_name,
-        owner_name,
-        phone,
-        whatsapp: whatsapp ?? null,
-        address: `${address}${landmark ? ", " + landmark : ""}${city ? ", " + city : ""}${pin ? " - " + pin : ""}`,
-        landmark: landmark ?? null,
-        google_map_link,
-        shop_image: shop_image ?? "",
-        banner_image: banner_image ?? "",
-        category,
-        opening_hours,
-        delivery_available: delivery_available ?? false,
-        verified: gst_verified ?? false,
-        gst_number: gst_number ?? null,
-        gst_verified: gst_verified ?? false,
-        business_name: business_name ?? null,
-        gst_status: gst_status ?? null,
-        legal_name: legal_name ?? null,
-        trade_name: trade_name ?? null,
-        business_type: business_type ?? null,
-        aadhaar_verified: aadhaar_verified ?? false,
-        principal_address: principal_address ?? null,
-        state: state ?? null,
-        district: district ?? null,
-        pincode: pincode ?? null,
-        tax_type: tax_type ?? null,
-        last_filing_status: last_filing_status ?? null,
-        verification_date: verification_date ? new Date(verification_date) : null,
-        shopkeeperId: shopkeeperId,
-      },
-    });
+    // Create the Shopkeeper and Shop in a transaction to prevent orphaned records if shop creation fails
+    const [newShopkeeper, shop] = await prisma.$transaction([
+      prisma.shopkeeper.create({
+        data: {
+          id: shopkeeperId,
+          email: email,
+          passwordHash: password, // In production, hash this with bcrypt!
+        },
+      }),
+      prisma.shop.create({
+        data: {
+          shop_name,
+          owner_name,
+          phone,
+          whatsapp: whatsapp ?? null,
+          address: `${address}${landmark ? ", " + landmark : ""}${city ? ", " + city : ""}${pin ? " - " + pin : ""}`,
+          landmark: landmark ?? null,
+          google_map_link,
+          shop_image: shop_image ?? "",
+          banner_image: banner_image ?? "",
+          category,
+          opening_hours: `${opening_time ?? "10:00"} AM - ${closing_time ?? "9:00"} PM`,
+          delivery_available: delivery_available ?? false,
+          verified: gst_verified ?? false,
+          gst_number: gst_number ?? null,
+          gst_verified: gst_verified ?? false,
+          business_name: business_name ?? null,
+          gst_status: gst_status ?? null,
+          legal_name: legal_name ?? null,
+          trade_name: trade_name ?? null,
+          business_type: business_type ?? null,
+          aadhaar_verified: aadhaar_verified ?? false,
+          principal_address: principal_address ?? null,
+          state: state ?? null,
+          district: district ?? null,
+          pincode: pincode ?? null,
+          tax_type: tax_type ?? null,
+          last_filing_status: last_filing_status ?? null,
+          verification_date: verification_date ? new Date(verification_date) : null,
+          shopkeeperId: shopkeeperId,
+        },
+      })
+    ]);
 
     // Set a simple cookie session
     const cookieStore = await cookies();

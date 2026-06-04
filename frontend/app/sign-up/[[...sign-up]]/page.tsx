@@ -11,7 +11,7 @@ export default function SignUpPage() {
       <div className="hidden lg:flex flex-col justify-center px-16 bg-gradient-to-br from-gray-900 via-[#1a1a2e] to-gray-900 w-[420px] flex-shrink-0">
         <Link href="/" className="flex items-center mb-10">
           <div className="w-48 h-12 relative flex items-center justify-start">
-            <Image src="/logo.jpeg" alt="Look2Local" fill className="object-contain object-left" />
+            <Image src="/look2local_logo.png" alt="Look2Local" fill className="object-contain object-left" />
           </div>
         </Link>
         <h1 className="font-heading text-3xl font-bold text-white mb-3 leading-tight">

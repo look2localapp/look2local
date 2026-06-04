@@ -43,7 +43,7 @@ export default function ShopkeeperLoginPage() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
         <div className="flex flex-col items-center mb-8">
           <div className="mb-4">
-            <Image src="/logo.jpeg" alt="Look2Local" width={64} height={64} className="w-16 h-16 rounded-xl object-contain shadow-sm border border-gray-100" />
+            <Image src="/look2local_logo.png" alt="Look2Local" width={64} height={64} className="w-16 h-16 rounded-xl object-contain shadow-sm border border-gray-100" />
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900">Sign in to Look2Local</h1>
           <p className="text-sm text-gray-500 mt-1">Welcome back! Please sign in to continue</p>
